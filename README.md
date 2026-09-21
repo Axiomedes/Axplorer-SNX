@@ -39,6 +39,84 @@ Axplorer SNX permite conmutar en tiempo real entre tres modos visuales complemen
 
 ---
 
+## 📁 Gestión de Archivos e Integración Profunda con Windows
+
+Axplorer SNX no es solo un visor 3D: es un gestor de archivos completo diseñado para operar en armonía con Windows File Explorer y las aplicaciones del sistema:
+
+### 📋 Portapapeles Nativo de Windows (`CF_HDROP`)
+- **Interoperabilidad Total:**
+  - Al pulsar **Copiar elemento** (o `Ctrl+C`), el archivo o carpeta se deposita en el portapapeles de Windows (`Clipboard.SetFileDropList`).
+  - Puedes copiar un elemento en Axplorer y pegarlo en el Explorador de Windows o el Escritorio, o copiar desde el Explorador de Windows y pegarlo dentro de Axplorer.
+- **Detección Activa del Estado del Portapapeles:**
+  - El sistema detecta en tiempo real si existen archivos en el portapapeles (`Clipboard.ContainsFileDropList()`).
+  - Al cambiar entre ventanas o regresar a la app (`MainWindow.Activated`), Axplorer actualiza instantáneamente su estado.
+- **Visibilidad Inteligente de "Pegar":**
+  - **Si el portapapeles está vacío:** La opción **"📥 Pegar elemento" se oculta completamente** en el menú contextual, tal como en el Explorador de Windows.
+  - **Si contiene elementos:** Aparece al hacer clic secundario sobre una carpeta (para pegar en su interior) o en el fondo vacío del directorio actual. En archivos individuales permanece oculta.
+- **Resolución Automática de Colisiones de Nombres:**
+  - Si un archivo ya existe o se pega en la misma carpeta, genera sufijos sucesivos estándar: `archivo - copia.ext`, `archivo - copia (2).ext`, etc.
+  - Para carpetas, genera `Carpeta - copia` y realiza una copia recursiva profunda de todos sus archivos y subdirectorios, con protección contra bucles (no permite pegar una carpeta dentro de sí misma).
+- **Retroalimentación Visual Inmediata (Toast Cyberpunk):**
+  - Notificaciones flotantes informan el resultado de cada acción en tiempo real (ej. *"Copiado al portapapeles: archivo.txt"* o *"Se ha pegado 'documento - copia.docx' exitosamente"*).
+  - La escena 3D se recarga automáticamente tras cada operación de pegado.
+
+### 🗜️ Integración con Compresores Externos
+Axplorer detecta automáticamente las herramientas de compresión instaladas en el sistema operativo (mediante registro y rutas de programa) y las pone a disposición en el menú contextual:
+- **WinRAR:**
+  - En archivos comprimidos (`.zip`, `.rar`, `.7z`, `.iso`, etc.):
+    - `🗜️ WinRAR: Extraer aquí`
+    - `🗜️ WinRAR: Extraer en [carpeta]\`
+    - `🗜️ Abrir con WinRAR`
+  - En carpetas o archivos normales:
+    - `🗜️ Añadir al archivo (WinRAR)...`
+- **7-Zip:**
+  - En archivos comprimidos: `📦 7-Zip: Extraer aquí` y `📦 Abrir con 7-Zip`.
+  - En archivos/carpetas normales: `📦 Añadir a [nombre].zip (7-Zip)`.
+- **Compresión Nativa de Windows:**
+  - `Extraer todo (Windows)...` disponible para archivos ZIP estándar.
+
+### 📝 Visores, Editores y Selector Universal
+- **Notepad++:** Opción `📝 Editar con Notepad++` disponible automáticamente si está instalado, para archivos de código, texto plano y configuraciones.
+- **Antigravity IDE:** Opción `⚡ Abrir con Antigravity` para abrir archivos de código o proyectos/carpetas completos.
+- **Paint:** Opción `🎨 Editar con Paint` para archivos gráficos e imágenes (`.png`, `.jpg`, `.bmp`, `.webp`).
+- **Abrir con... (Selector Universal de Windows):**
+  - Opción `🌐 Abrir con... (Elegir aplicación)` que invoca el diálogo nativo de Windows (`shell32.dll,OpenAs_RunDLL`) para abrir el archivo con cualquier visor registrado en el sistema.
+
+### 🪟 Menú Contextual Shell Completo de Windows (`IContextMenu`)
+- Opción **`🪟 Más opciones (Menú de Windows)`** (y atajo **`Shift + F10`**):
+  - Despliega el menú contextual nativo Win32 de Windows Explorer en la coordenada exacta del ratón utilizando las interfaces COM `IShellFolder`, `IContextMenu` y `TrackPopupMenuEx`.
+  - Garantiza acceso al **100% de las extensiones shell de terceros** instaladas en el equipo (antivirus como Defender, menús contextuales de Git, clientes en la nube como OneDrive o Dropbox, y herramientas propietarias).
+
+### 💻 Acciones Rápidas del Sistema
+- **Mostrar en el Explorador (`show_in_folder`):** Abre la carpeta contenedora en Windows Explorer con el elemento seleccionado y enfocado.
+- **Abrir en Terminal (`open_terminal`):** Abre PowerShell o Windows Terminal directamente en la ruta del elemento seleccionado.
+- **Propiedades de Windows (`show_properties`):** Abre la ventana nativa de Propiedades de Windows (`ShellExecuteEx` con `SEE_MASK_INVOKEIDLIST`).
+- **Copiar como ruta (`Ctrl + Shift + C`):** Copia la ruta absoluta al portapapeles.
+- **Copiar nombre:** Copia únicamente el nombre del elemento al portapapeles.
+
+---
+
+## 🪟 Control y Gestión de Ventanas del Sistema
+
+Axplorer SNX se integra con el Administrador de Ventanas de Windows para ofrecer control total sobre la aplicación y las demás ventanas del sistema:
+
+### 🪟 Arrastre Fluido de Ventana y Soporte Aero Snap
+- **Barra de Título Interactiva:**
+  - Arrastre fluido mediante llamadas Win32 P/Invoke (`ReleaseCapture` y `SendMessage` con `WM_NCLBUTTONDOWN` / `HT_CAPTION`).
+  - Compatible con **Windows Snap**: arrastra la ventana hacia los bordes o esquinas de la pantalla para acoplarla.
+  - **Restauración al Arrastrar:** Si la ventana está maximizada y el usuario arrastra la barra de título, la ventana se restaura suavemente bajo el cursor y continúa el arrastre sin saltos.
+  - **Doble Clic:** Conmuta entre maximizar y restaurar la ventana.
+  - Protección con `user-select: none;` para evitar selecciones de texto accidentales.
+
+### 🛑 Orden de Cierre Limpia para Ventanas Activas (`WM_CLOSE`)
+- En el panel lateral izquierdo (**Ventanas Activas**), cada ventana abierta en Windows cuenta con un botón **`✕`** de cierre limpio:
+  - **Mecanismo No Destructivo:** Envía el mensaje Win32 **`WM_CLOSE`** mediante `PostMessage`. Funciona exactamente igual a presionar la "X" superior de una ventana o pulsar `Alt + F4`.
+  - **Protección de Documentos:** Las ventanas ordinarias se cierran al instante. Si se trata de un documento en edición con cambios no guardados (Word, Excel, Bloc de notas, Paint, VS Code), la aplicación se activa y despliega su propio cuadro de diálogo nativo preguntando si se desean guardar los cambios antes de salir.
+  - **No Bloqueante:** Axplorer permanece totalmente fluido y no se bloquea mientras la otra aplicación espera la decisión del usuario.
+  - **Retroalimentación Visual:** El botón se ilumina en rojo neón al pasar el cursor; al hacer clic, la fila se atenúa de inmediato y la lista se actualiza automáticamente a los pocos instantes.
+
+---
+
 ## 🎨 Código Cromático de Elementos
 
 | Tipo | Color | Representación |
@@ -53,19 +131,6 @@ Axplorer SNX permite conmutar en tiempo real entre tres modos visuales complemen
 | **Comprimidos (Zip/Rar)** | `#f59e0b` | Ámbar / Naranja |
 | **Ejecutables (.exe/.dll)**| `#ff0055` | Carmesí intenso |
 | **Otros / Binarios** | `#94a3b8` | Gris pizarra |
-
----
-
-## ⚡ Características Principales
-
-- **Menú Contextual Nativo Windows 11:** Clic secundario en cualquier elemento 3D o en el espacio para desplegar opciones completas: *Abrir, Mostrar en el Explorador, Abrir en Terminal / PowerShell, Copiar elemento, Copiar ruta, Copiar nombre, Propiedades*.
-- **HUD Translúcido con Cristal Acrílico:**
-  - Barra de migas de pan holográficas seleccionables.
-  - Paneles colapsables de unidades de disco, accesos rápidos y ventanas activas del sistema.
-  - Widget de control de cámara 3D (restablecer vista y vista 2.5D cenital).
-  - Buscador / filtro en tiempo real para localizar nodos al instante.
-- **Ventana Nativa WPF "Acerca De":** Diálogo desacoplado en XAML con identidad corporativa, logotipo personalizado, tipografía estilizada y ficha técnica editable externamente desde `AboutInfo.cs`.
-- **Continuidad Cinemática Espacial:** Movimientos fluidos de cámara entre jerarquías sin recargas bruscas.
 
 ---
 
