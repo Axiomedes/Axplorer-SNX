@@ -4,6 +4,7 @@ using System.Windows;
 using aXplorer.Models;
 using aXplorer.Services;
 using Microsoft.Web.WebView2.Core;
+using System.Runtime.InteropServices;
 
 namespace aXplorer.Bridge
 {
@@ -83,11 +84,83 @@ namespace aXplorer.Bridge
             {
                 case "init":
                     SendAboutInfo();
+                    SendClipboardStatus();
                     SendPlexUpdate(_currentPath);
                     break;
 
                 case "get_about_info":
                     SendAboutInfo();
+                    break;
+
+                case "get_clipboard_status":
+                    SendClipboardStatus();
+                    break;
+
+                case "get_external_tools":
+                    if (!string.IsNullOrEmpty(message.Payload))
+                    {
+                        var tools = ExternalToolService.GetToolsForPath(message.Payload);
+                        var response = new
+                        {
+                            type = "external_tools",
+                            path = message.Payload,
+                            tools = tools
+                        };
+                        string json = JsonSerializer.Serialize(response, JsonOpts);
+                        _webView?.PostWebMessageAsJson(json);
+                    }
+                    break;
+
+                case "execute_external_tool":
+                    if (!string.IsNullOrEmpty(message.Payload) && !string.IsNullOrEmpty(message.ToolId))
+                    {
+                        _mainWindow.Dispatcher.Invoke(() =>
+                        {
+                            try
+                            {
+                                int sx = message.ScreenX ?? 100;
+                                int sy = message.ScreenY ?? 100;
+                                if (message.ScreenX == null || message.ScreenY == null)
+                                {
+                                    GetCursorPos(out POINT pt);
+                                    sx = pt.X;
+                                    sy = pt.Y;
+                                }
+                                var helper = new System.Windows.Interop.WindowInteropHelper(_mainWindow);
+                                bool ok = ExternalToolService.ExecuteTool(message.ToolId, message.Payload, helper.Handle, sx, sy);
+                                if (ok)
+                                {
+                                    SendPlexUpdate(_currentPath);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                SendNotification($"Error al ejecutar herramienta: {ex.Message}");
+                            }
+                        });
+                    }
+                    break;
+
+                case "show_native_context_menu":
+                    if (!string.IsNullOrEmpty(message.Payload))
+                    {
+                        _mainWindow.Dispatcher.Invoke(() =>
+                        {
+                            try
+                            {
+                                GetCursorPos(out POINT pt);
+                                int sx = message.ScreenX ?? pt.X;
+                                int sy = message.ScreenY ?? pt.Y;
+                                var helper = new System.Windows.Interop.WindowInteropHelper(_mainWindow);
+                                ShellContextMenu.Show(helper.Handle, message.Payload, sx, sy);
+                                SendPlexUpdate(_currentPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                SendNotification($"Error al abrir menú nativo: {ex.Message}");
+                            }
+                        });
+                    }
                     break;
 
                 case "open_about_window":
@@ -149,7 +222,29 @@ namespace aXplorer.Bridge
                 case "copy_file_clipboard":
                     if (!string.IsNullOrEmpty(message.Payload))
                     {
-                        _fileSystemService.CopyFileToClipboard(message.Payload);
+                        bool copied = _fileSystemService.CopyFileToClipboard(message.Payload);
+                        if (copied)
+                        {
+                            SendNotification($"Copiado al portapapeles: {System.IO.Path.GetFileName(message.Payload)}");
+                        }
+                        SendClipboardStatus();
+                    }
+                    break;
+
+                case "paste_file_clipboard":
+                    {
+                        string? destPath = message.Payload;
+                        if (string.IsNullOrWhiteSpace(destPath) || destPath == "root" || destPath == "welcome")
+                        {
+                            destPath = _currentPath;
+                        }
+                        var (pasted, pasteMsg) = _fileSystemService.PasteFromClipboard(destPath);
+                        SendNotification(pasteMsg);
+                        SendClipboardStatus();
+                        if (pasted)
+                        {
+                            SendPlexUpdate(_currentPath);
+                        }
                     }
                     break;
 
@@ -157,6 +252,17 @@ namespace aXplorer.Bridge
                     if (message.WindowHandle.HasValue)
                     {
                         _windowManagerService.FocusWindow(message.WindowHandle.Value);
+                    }
+                    break;
+
+                case "close_window":
+                    if (message.WindowHandle.HasValue)
+                    {
+                        bool sent = _windowManagerService.CloseWindow(message.WindowHandle.Value);
+                        if (sent)
+                        {
+                            System.Threading.Tasks.Task.Delay(600).ContinueWith(_ => SendWindowsUpdate());
+                        }
                     }
                     break;
 
@@ -188,10 +294,16 @@ namespace aXplorer.Bridge
                     {
                         try
                         {
-                            if (_mainWindow.WindowState == WindowState.Normal && System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+                            if (_mainWindow.WindowState == WindowState.Maximized)
                             {
-                                _mainWindow.DragMove();
+                                GetCursorPos(out POINT pt);
+                                _mainWindow.WindowState = WindowState.Normal;
+                                _mainWindow.Left = Math.Max(0, pt.X - (_mainWindow.ActualWidth / 2));
+                                _mainWindow.Top = Math.Max(0, pt.Y - 20);
                             }
+                            ReleaseCapture();
+                            var helper = new System.Windows.Interop.WindowInteropHelper(_mainWindow);
+                            SendMessage(helper.Handle, WM_NCLBUTTONDOWN, (IntPtr)HT_CAPTION, IntPtr.Zero);
                         }
                         catch { }
                     });
@@ -283,6 +395,22 @@ namespace aXplorer.Bridge
             catch { }
         }
 
+        public void SendClipboardStatus()
+        {
+            try
+            {
+                bool hasFiles = _fileSystemService.HasClipboardFiles();
+                var response = new
+                {
+                    type = "clipboard_status",
+                    hasFiles = hasFiles
+                };
+                string json = JsonSerializer.Serialize(response, JsonOpts);
+                _webView?.PostWebMessageAsJson(json);
+            }
+            catch { }
+        }
+
         public void SendAboutInfo()
         {
             try
@@ -297,5 +425,24 @@ namespace aXplorer.Bridge
             }
             catch { }
         }
+
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
     }
 }

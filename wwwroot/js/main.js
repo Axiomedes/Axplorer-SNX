@@ -20,11 +20,12 @@ class AppBridge {
     }
   }
 
-  sendMessage(action, payload = null, windowHandle = null) {
+  sendMessage(action, payload = null, windowHandle = null, extra = null) {
     const msg = {
       action: action,
       payload: payload,
-      windowHandle: windowHandle
+      windowHandle: windowHandle,
+      ...(extra || {})
     };
 
     if (window.chrome && window.chrome.webview) {
@@ -267,8 +268,19 @@ window.addEventListener('DOMContentLoaded', () => {
       hud.updateAboutModal(msg.data);
     } else if (msg.type === 'windows_update') {
       hud.renderWindows(msg.data);
+    } else if (msg.type === 'clipboard_status') {
+      if (hud && hud.setClipboardStatus) {
+        hud.setClipboardStatus(msg.hasFiles);
+      }
+    } else if (msg.type === 'external_tools') {
+      if (hud && hud.renderExternalTools) {
+        hud.renderExternalTools(msg.path, msg.tools);
+      }
     } else if (msg.type === 'notification') {
       console.log("[aXplorer System]", msg.message);
+      if (hud && hud.showToast) {
+        hud.showToast(msg.message);
+      }
     }
   });
 

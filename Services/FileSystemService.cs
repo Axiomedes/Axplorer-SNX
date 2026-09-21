@@ -468,6 +468,202 @@ namespace aXplorer.Services
             }
         }
 
+        public bool HasClipboardFiles()
+        {
+            bool hasFiles = false;
+            try
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        try
+                        {
+                            hasFiles = Clipboard.ContainsFileDropList();
+                            break;
+                        }
+                        catch
+                        {
+                            System.Threading.Thread.Sleep(10);
+                        }
+                    }
+                });
+            }
+            catch { }
+            return hasFiles;
+        }
+
+        public (bool success, string message) PasteFromClipboard(string? targetDirectory)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(targetDirectory) ||
+                    targetDirectory.Equals("root", StringComparison.OrdinalIgnoreCase) ||
+                    targetDirectory.Equals("welcome", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (false, "No se puede pegar en una ubicación raíz o virtual del sistema.");
+                }
+
+                // If targetDirectory is a file, paste into its parent directory
+                if (File.Exists(targetDirectory))
+                {
+                    targetDirectory = Path.GetDirectoryName(targetDirectory) ?? targetDirectory;
+                }
+
+                if (!Directory.Exists(targetDirectory))
+                {
+                    return (false, $"El directorio de destino no existe: {targetDirectory}");
+                }
+
+                System.Collections.Specialized.StringCollection? dropList = null;
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    if (Clipboard.ContainsFileDropList())
+                    {
+                        dropList = Clipboard.GetFileDropList();
+                    }
+                });
+
+                if (dropList == null || dropList.Count == 0)
+                {
+                    return (false, "El portapapeles no contiene archivos ni carpetas.");
+                }
+
+                int copiedCount = 0;
+                var copiedNames = new List<string>();
+
+                foreach (string? sourcePath in dropList)
+                {
+                    if (string.IsNullOrWhiteSpace(sourcePath)) continue;
+
+                    if (File.Exists(sourcePath))
+                    {
+                        string originalFileName = Path.GetFileName(sourcePath);
+                        string destFilePath = GetUniqueDestinationFilePath(targetDirectory, sourcePath, originalFileName);
+                        File.Copy(sourcePath, destFilePath, true);
+                        copiedCount++;
+                        copiedNames.Add(Path.GetFileName(destFilePath));
+                    }
+                    else if (Directory.Exists(sourcePath))
+                    {
+                        string normalizedSource = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        string normalizedDest = Path.GetFullPath(targetDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                        // Prevent recursive copying into itself
+                        if (normalizedDest.Equals(normalizedSource, StringComparison.OrdinalIgnoreCase) ||
+                            normalizedDest.StartsWith(normalizedSource + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        string originalDirName = Path.GetFileName(normalizedSource);
+                        if (string.IsNullOrEmpty(originalDirName))
+                        {
+                            originalDirName = "Carpeta";
+                        }
+                        string destDirPath = GetUniqueDestinationDirectoryPath(targetDirectory, normalizedSource, originalDirName);
+                        CopyDirectoryRecursive(sourcePath, destDirPath);
+                        copiedCount++;
+                        copiedNames.Add(Path.GetFileName(destDirPath));
+                    }
+                }
+
+                if (copiedCount == 0)
+                {
+                    return (false, "No se pudo pegar ningún elemento del portapapeles.");
+                }
+
+                string msg = copiedCount == 1
+                    ? $"Se ha pegado '{copiedNames[0]}' exitosamente."
+                    : $"Se han pegado {copiedCount} elementos exitosamente.";
+
+                return (true, msg);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error pasting from clipboard: {ex.Message}");
+                return (false, $"Error al pegar: {ex.Message}");
+            }
+        }
+
+        private static string GetUniqueDestinationFilePath(string targetDirectory, string sourcePath, string fileName)
+        {
+            string destPath = Path.Combine(targetDirectory, fileName);
+            bool isSameFolder = Path.GetDirectoryName(Path.GetFullPath(sourcePath))?
+                .Equals(Path.GetFullPath(targetDirectory), StringComparison.OrdinalIgnoreCase) == true;
+
+            if (!File.Exists(destPath) && !isSameFolder)
+            {
+                return destPath;
+            }
+
+            string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+            string ext = Path.GetExtension(fileName);
+
+            string candidate = Path.Combine(targetDirectory, $"{nameWithoutExt} - copia{ext}");
+            if (!File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            int counter = 2;
+            while (true)
+            {
+                candidate = Path.Combine(targetDirectory, $"{nameWithoutExt} - copia ({counter}){ext}");
+                if (!File.Exists(candidate))
+                {
+                    return candidate;
+                }
+                counter++;
+            }
+        }
+
+        private static string GetUniqueDestinationDirectoryPath(string targetDirectory, string sourcePath, string dirName)
+        {
+            string destPath = Path.Combine(targetDirectory, dirName);
+            bool isSameFolder = Path.GetDirectoryName(Path.GetFullPath(sourcePath))?
+                .Equals(Path.GetFullPath(targetDirectory), StringComparison.OrdinalIgnoreCase) == true;
+
+            if (!Directory.Exists(destPath) && !isSameFolder)
+            {
+                return destPath;
+            }
+
+            string candidate = Path.Combine(targetDirectory, $"{dirName} - copia");
+            if (!Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            int counter = 2;
+            while (true)
+            {
+                candidate = Path.Combine(targetDirectory, $"{dirName} - copia ({counter})");
+                if (!Directory.Exists(candidate))
+                {
+                    return candidate;
+                }
+                counter++;
+            }
+        }
+
+        private static void CopyDirectoryRecursive(string sourceDir, string destDir)
+        {
+            Directory.CreateDirectory(destDir);
+
+            foreach (string file in Directory.GetFiles(sourceDir))
+            {
+                string destFile = Path.Combine(destDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
+
+            foreach (string subDir in Directory.GetDirectories(sourceDir))
+            {
+                string destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
+                CopyDirectoryRecursive(subDir, destSubDir);
+            }
+        }
+
 
         public static string CategorizeExtension(string ext)
         {

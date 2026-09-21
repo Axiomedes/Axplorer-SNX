@@ -59,5 +59,8 @@ namespace aXplorer.Models
         public string Action { get; set; } = string.Empty;
         public string? Payload { get; set; }
         public long? WindowHandle { get; set; }
+        public string? ToolId { get; set; }
+        public int? ScreenX { get; set; }
+        public int? ScreenY { get; set; }
     }
 }

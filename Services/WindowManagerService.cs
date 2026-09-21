@@ -123,6 +123,11 @@ namespace aXplorer.Services
             return windows;
         }
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        private const uint WM_CLOSE = 0x0010;
+
         public bool FocusWindow(long hwndVal)
         {
             try
@@ -137,6 +142,25 @@ namespace aXplorer.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error focusing window: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool CloseWindow(long hwndVal)
+        {
+            try
+            {
+                var hWnd = new IntPtr(hwndVal);
+                if (hWnd == IntPtr.Zero) return false;
+
+                // PostMessage sends WM_CLOSE asynchronously into the target window's message queue.
+                // It functions identically to clicking the window's close (X) button or pressing Alt+F4.
+                // Normal windows close immediately; documents with unsaved changes trigger their native save dialogs.
+                return PostMessage(hWnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error closing window {hwndVal}: {ex.Message}");
                 return false;
             }
         }

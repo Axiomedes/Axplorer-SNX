@@ -133,6 +133,9 @@
   <!-- Floating 3D Cursor Tooltip -->
   <div id="node-tooltip"></div>
 
+  <!-- Toast Notification Feedback -->
+  <div id="hud-toast" class="hud-toast" style="display: none;"></div>
+
   <!-- Windows File Explorer Context Menu -->
   <div id="win-context-menu" class="win-context-menu glass-panel" style="display: none;">
     <div class="ctx-header">
@@ -153,11 +156,19 @@
       <span class="ctx-item-icon">💻</span>
       <span class="ctx-item-label">Abrir en Terminal / PowerShell</span>
     </div>
+    <!-- External Integrated Tools (Compressors, Viewers, Editors) -->
+    <div class="ctx-divider" id="ctx-div-tools" style="display: none;"></div>
+    <div id="ctx-external-tools-list"></div>
     <div class="ctx-divider" id="ctx-div-clipboard"></div>
     <div class="ctx-item" data-action="copy_file" id="ctx-action-copy-file">
       <span class="ctx-item-icon">📋</span>
       <span class="ctx-item-label">Copiar elemento</span>
       <span class="ctx-item-shortcut">Ctrl+C</span>
+    </div>
+    <div class="ctx-item" data-action="paste_file" id="ctx-action-paste-file">
+      <span class="ctx-item-icon">📥</span>
+      <span class="ctx-item-label">Pegar elemento</span>
+      <span class="ctx-item-shortcut">Ctrl+V</span>
     </div>
     <div class="ctx-item" data-action="copy_path" id="ctx-action-copy-path">
       <span class="ctx-item-icon">🔗</span>

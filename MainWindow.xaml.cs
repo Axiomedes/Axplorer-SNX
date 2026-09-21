@@ -22,6 +22,7 @@ namespace aXplorer
             _windowManagerService = new WindowManagerService();
 
             Loaded += MainWindow_Loaded;
+            Activated += (s, e) => _systemBridge?.SendClipboardStatus();
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)

@@ -320,8 +320,26 @@ class PlexGraph {
     group.userData = { nodeData: data, isCenter: isCenter };
 
     const colorHex = this.colors[data.itemType] || 0x00f0ff;
-    // Nodes slightly smaller as requested
-    const baseRadius = isCenter ? 2.8 : 1.45 * scaleFactor;
+
+    // Escala dinámica del planeta según tamaño en disco
+    let sizeScale = 1.0;
+    if (!isCenter) {
+      if (data.isDirectory || data.isDrive) {
+        const count = data.childCount || 0;
+        sizeScale = 0.85 + Math.min(0.55, Math.log10(Math.max(1, count) + 1) * 0.22);
+      } else if (data.sizeBytes !== undefined && data.sizeBytes !== null) {
+        const bytes = Math.max(0, Number(data.sizeBytes) || 0);
+        if (bytes <= 0) {
+          sizeScale = 0.72;
+        } else {
+          // Escala logarítmica suave: 1KB ~ 0.85x, 1MB ~ 1.1x, 100MB ~ 1.35x, 1GB+ ~ 1.65x
+          const logVal = Math.log10(bytes);
+          sizeScale = Math.max(0.68, Math.min(1.68, 0.68 + (logVal / 9) * 0.95));
+        }
+      }
+    }
+
+    const baseRadius = isCenter ? 2.8 : 1.45 * scaleFactor * sizeScale;
 
     // 1. Core Geometry
     let geometry;

@@ -78,13 +78,18 @@ class HudOverlay {
     this.ctxActionReveal = document.getElementById('ctx-action-reveal');
     this.ctxActionTerminal = document.getElementById('ctx-action-terminal');
     this.ctxActionCopyFile = document.getElementById('ctx-action-copy-file');
+    this.ctxActionPasteFile = document.getElementById('ctx-action-paste-file');
     this.ctxActionCopyPath = document.getElementById('ctx-action-copy-path');
     this.ctxActionCopyName = document.getElementById('ctx-action-copy-name');
     this.ctxActionRefresh = document.getElementById('ctx-action-refresh');
     this.ctxActionNavUp = document.getElementById('ctx-action-nav-up');
     this.ctxActionProperties = document.getElementById('ctx-action-properties');
+    this.ctxDivTools = document.getElementById('ctx-div-tools');
+    this.ctxExternalToolsList = document.getElementById('ctx-external-tools-list');
     this.ctxDivClipboard = document.getElementById('ctx-div-clipboard');
+    this.toastEl = document.getElementById('hud-toast');
     this.activeContextNode = null;
+    this.clipboardHasFiles = false;
 
     // Traffic Setting Element
     this.settingShowTraffic = document.getElementById('setting-show-traffic');
@@ -317,7 +322,7 @@ class HudOverlay {
         const item = e.target.closest('.ctx-item');
         if (!item) return;
         const action = item.dataset.action;
-        this.handleContextMenuAction(action);
+        this.handleContextMenuAction(action, item, e);
         this.hideContextMenu();
       });
 
@@ -328,11 +333,21 @@ class HudOverlay {
       });
     }
 
-    // Window drag support
-    document.getElementById('top-bar').addEventListener('mousedown', (e) => {
-      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.crumb-item')) return;
-      this.bridge.sendMessage('drag_move');
-    });
+    // Window drag support & maximize toggle on top-bar
+    const topBar = document.getElementById('top-bar');
+    if (topBar) {
+      topBar.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.crumb-item')) return;
+        this.bridge.sendMessage('drag_move');
+      });
+
+      topBar.addEventListener('dblclick', (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.crumb-item')) return;
+        this.bridge.sendMessage('toggle_fullscreen');
+      });
+    }
 
     // Prevent zoom propagation on all periphery HUD panels (sidebar, top-bar, bottom-bar, etc.)
     const peripheryElements = document.querySelectorAll('.sidebar, #top-bar, #bottom-bar, #camera-widget, .settings-dialog');
@@ -442,6 +457,41 @@ class HudOverlay {
         }
       }
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
+      // Copy & Paste Shortcuts (Windows File Explorer Style)
+      if (e.ctrlKey && !e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+        const target = this.selectedNodeData || this.activeContextNode;
+        if (target && target.fullPath && target.fullPath !== 'welcome' && target.fullPath !== 'root') {
+          e.preventDefault();
+          this.bridge.sendMessage('copy_file_clipboard', target.fullPath);
+        }
+      }
+
+      if (e.ctrlKey && !e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+        if (!this.clipboardHasFiles) {
+          this.showToast("El portapapeles no contiene archivos ni carpetas para pegar.");
+          return;
+        }
+        const current = (this.lastPayload && this.lastPayload.currentNode) || null;
+        let pasteDest = (this.selectedNodeData && (this.selectedNodeData.isDirectory || this.selectedNodeData.isDrive))
+          ? this.selectedNodeData.fullPath
+          : (current ? current.fullPath : null);
+
+        if (pasteDest && pasteDest !== 'welcome' && pasteDest !== 'root') {
+          e.preventDefault();
+          this.bridge.sendMessage('paste_file_clipboard', pasteDest);
+        }
+      }
+
+      // Shift+F10: Open Windows native shell context menu on selected node
+      if (e.shiftKey && e.key === 'F10') {
+        const target = this.selectedNodeData || this.activeContextNode || (this.lastPayload && this.lastPayload.currentNode);
+        if (target && target.fullPath && target.fullPath !== 'welcome' && target.fullPath !== 'root') {
+          e.preventDefault();
+          this.bridge.sendMessage('show_native_context_menu', target.fullPath);
+        }
+      }
+
       if (e.key === 'Backspace' || (e.altKey && e.key === 'ArrowUp')) {
         e.preventDefault();
         this.navigateUp();
@@ -489,6 +539,22 @@ class HudOverlay {
     const isItem = !!nodeData;
     const isDir = isItem && (nodeData.isDirectory || nodeData.isDrive || nodeData.isLibrary || nodeData.itemType === 'system');
 
+    // Request fresh clipboard status immediately
+    this.bridge.sendMessage('get_clipboard_status');
+
+    // Reset external tools container
+    if (this.ctxExternalToolsList) {
+      this.ctxExternalToolsList.innerHTML = '';
+    }
+    if (this.ctxDivTools) {
+      this.ctxDivTools.style.display = 'none';
+    }
+
+    const targetPath = (nodeData && nodeData.fullPath) || (current && current.fullPath) || null;
+    if (targetPath && targetPath !== 'welcome' && targetPath !== 'root') {
+      this.bridge.sendMessage('get_external_tools', targetPath);
+    }
+
     if (isItem) {
       const iconMap = {
         folder: '📁', document: '📄', image: '🖼️', audio: '🎵', video: '🎬',
@@ -502,6 +568,10 @@ class HudOverlay {
       this.ctxActionReveal.style.display = 'flex';
       this.ctxActionTerminal.style.display = isDir ? 'flex' : 'none';
       this.ctxActionCopyFile.style.display = 'flex';
+      if (this.ctxActionPasteFile) {
+        // "Pegar" is ONLY visible if clipboard actually contains files and destination is a folder
+        this.ctxActionPasteFile.style.display = (this.clipboardHasFiles && isDir) ? 'flex' : 'none';
+      }
       this.ctxActionCopyPath.style.display = 'flex';
       this.ctxActionCopyName.style.display = 'flex';
       if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = 'block';
@@ -511,15 +581,20 @@ class HudOverlay {
     } else {
       // Background context menu (Current Folder Workspace)
       const current = (this.lastPayload && this.lastPayload.currentNode) || null;
+      const isRealFolder = current && current.fullPath && current.fullPath !== 'welcome' && current.fullPath !== 'root';
       this.ctxItemIcon.textContent = '🏙️';
       this.ctxItemTitle.textContent = current ? (current.name || 'Carpeta actual') : 'Espacio 3D';
       this.ctxActionOpen.style.display = 'none';
       this.ctxActionReveal.style.display = current && current.fullPath ? 'flex' : 'none';
-      this.ctxActionTerminal.style.display = current && current.fullPath ? 'flex' : 'none';
+      this.ctxActionTerminal.style.display = isRealFolder ? 'flex' : 'none';
       this.ctxActionCopyFile.style.display = 'none';
+      if (this.ctxActionPasteFile) {
+        // "Pegar" is ONLY visible if clipboard actually contains files and current location is a real folder
+        this.ctxActionPasteFile.style.display = (this.clipboardHasFiles && isRealFolder) ? 'flex' : 'none';
+      }
       this.ctxActionCopyPath.style.display = current && current.fullPath ? 'flex' : 'none';
       this.ctxActionCopyName.style.display = 'none';
-      if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = current && current.fullPath ? 'block' : 'none';
+      if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = isRealFolder ? 'block' : 'none';
       this.ctxActionRefresh.style.display = 'flex';
       this.ctxActionNavUp.style.display = this.currentLevel !== 'welcome' ? 'flex' : 'none';
       this.ctxActionProperties.style.display = current && current.fullPath ? 'flex' : 'none';
@@ -551,12 +626,29 @@ class HudOverlay {
     this.activeContextNode = null;
   }
 
-  handleContextMenuAction(action) {
+  handleContextMenuAction(action, item = null, event = null) {
     const node = this.activeContextNode;
     const current = (this.lastPayload && this.lastPayload.currentNode) || null;
     const targetPath = (node && node.fullPath) || (current && current.fullPath) || null;
 
     switch (action) {
+      case 'ext_tool':
+        if (item && item.dataset.toolId) {
+          const toolId = item.dataset.toolId;
+          const path = item.dataset.targetPath || targetPath;
+          if (toolId === 'native_shell_menu') {
+            this.hideContextMenu();
+          }
+          const sx = (event && event.screenX) ? event.screenX : (window.screenX + 150);
+          const sy = (event && event.screenY) ? event.screenY : (window.screenY + 150);
+          this.bridge.sendMessage('execute_external_tool', path, null, {
+            toolId: toolId,
+            screenX: sx,
+            screenY: sy
+          });
+        }
+        break;
+
       case 'open':
         if (node) {
           this.executeNodeAction(node);
@@ -578,6 +670,16 @@ class HudOverlay {
       case 'copy_file':
         if (targetPath) {
           this.bridge.sendMessage('copy_file_clipboard', targetPath);
+        }
+        break;
+
+      case 'paste_file':
+        {
+          const isDir = node && (node.isDirectory || node.isDrive || node.isLibrary || node.itemType === 'system');
+          const dest = (node && isDir) ? node.fullPath : (current ? current.fullPath : null);
+          if (dest && dest !== 'welcome' && dest !== 'root') {
+            this.bridge.sendMessage('paste_file_clipboard', dest);
+          }
         }
         break;
 
@@ -767,10 +869,23 @@ class HudOverlay {
         <span class="item-icon">🪟</span>
         <span class="item-name" title="${w.title}">${w.title}</span>
         <span class="item-badge">${w.processName}</span>
+        <button class="win-close-btn" title="Cerrar ventana (enviar orden de cierre)" data-hwnd="${w.hwnd}">✕</button>
       `;
-      el.addEventListener('click', () => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.win-close-btn')) return;
         this.bridge.sendMessage('focus_window', null, w.hwnd);
       });
+
+      const closeBtn = el.querySelector('.win-close-btn');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          el.style.opacity = '0.35';
+          el.style.pointerEvents = 'none';
+          this.bridge.sendMessage('close_window', null, w.hwnd);
+        });
+      }
+
       this.windowsListEl.appendChild(el);
     });
   }
@@ -994,6 +1109,84 @@ class HudOverlay {
       localStorage.setItem('axplorer_settings', JSON.stringify(s));
     } catch (e) {
       console.warn("No se pudieron guardar los ajustes:", e);
+    }
+  }
+
+  showToast(message, duration = 2800) {
+    if (!this.toastEl) {
+      this.toastEl = document.getElementById('hud-toast');
+    }
+    if (!this.toastEl) return;
+
+    this.toastEl.textContent = message;
+    this.toastEl.style.display = 'block';
+    void this.toastEl.offsetWidth;
+    this.toastEl.style.opacity = '1';
+
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this.toastEl.style.opacity = '0';
+      setTimeout(() => {
+        this.toastEl.style.display = 'none';
+      }, 260);
+    }, duration);
+  }
+
+  setClipboardStatus(hasFiles) {
+    this.clipboardHasFiles = !!hasFiles;
+    if (this.contextMenuEl && this.contextMenuEl.style.display !== 'none' && this.ctxActionPasteFile) {
+      const node = this.activeContextNode;
+      const isItem = !!node;
+      const isDir = isItem && (node.isDirectory || node.isDrive || node.isLibrary || node.itemType === 'system');
+      const current = (this.lastPayload && this.lastPayload.currentNode) || null;
+      const isRealFolder = current && current.fullPath && current.fullPath !== 'welcome' && current.fullPath !== 'root';
+      const canPaste = this.clipboardHasFiles && (isDir || (!isItem && isRealFolder));
+      this.ctxActionPasteFile.style.display = canPaste ? 'flex' : 'none';
+    }
+  }
+
+  renderExternalTools(path, tools) {
+    if (!this.contextMenuEl || this.contextMenuEl.style.display === 'none') return;
+    if (!this.ctxExternalToolsList) return;
+
+    const activePath = (this.activeContextNode && this.activeContextNode.fullPath) ||
+                      (this.lastPayload && this.lastPayload.currentNode && this.lastPayload.currentNode.fullPath);
+    if (activePath !== path) return;
+
+    this.ctxExternalToolsList.innerHTML = '';
+    if (!tools || tools.length === 0) {
+      if (this.ctxDivTools) this.ctxDivTools.style.display = 'none';
+      return;
+    }
+
+    if (this.ctxDivTools) this.ctxDivTools.style.display = 'block';
+
+    for (const tool of tools) {
+      const el = document.createElement('div');
+      el.className = 'ctx-item';
+      el.dataset.action = 'ext_tool';
+      el.dataset.toolId = tool.id;
+      el.dataset.targetPath = path;
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'ctx-item-icon';
+      iconSpan.textContent = tool.icon || '⚡';
+
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'ctx-item-label';
+      labelSpan.textContent = tool.label;
+
+      el.appendChild(iconSpan);
+      el.appendChild(labelSpan);
+
+      if (tool.id === 'native_shell_menu') {
+        const sc = document.createElement('span');
+        sc.className = 'ctx-item-shortcut';
+        sc.textContent = 'Shift+F10';
+        el.appendChild(sc);
+      }
+
+      this.ctxExternalToolsList.appendChild(el);
     }
   }
 }
