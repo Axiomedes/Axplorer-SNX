@@ -18,11 +18,15 @@ Axplorer SNX permite conmutar en tiempo real entre tres modos visuales complemen
 - **Arquitectura Urbana Procedimental:** Cada carpeta es un distrito o manzana urbana y cada archivo un edificio tridimensional con altura proporcional a su tamaño en disco.
 - **Tráfico Vehicular de Luz:** Paquetes luminosos aleatorios viajan en línea recta a lo largo de las calles de la cuadrícula simulando el flujo de tráfico de una metrópolis cibernética.
 - **Caja de Bienvenida e Hub de Almacenamiento:** Despliegue tridimensional de unidades de almacenamiento (`C:\`, `D:\`) con medidores volumétricos de espacio libre y accesos directos rápidos.
+<img width="480" height="282" alt="image" src="https://github.com/user-attachments/assets/90aeeb15-d05a-40b0-9a94-087eda40322d" />
 
+---
 ### 2. 🌐 Modo Constelación (*Spatial Plex*)
 - **Ecosistema Orbital Planetario:** El elemento central actúa como sol/núcleo y los contenidos orbitan en anillos concéntricos según su jerarquía (carpetas en órbitas internas, archivos en anillos exteriores).
 - **Física de Partículas y Ondas Sincronizadas:** Ondas concéntricas expansivas y paquetes de datos en tránsito continuo entre los nodos del grafo.
+<img width="480" height="280" alt="image" src="https://github.com/user-attachments/assets/307e7e69-cec9-4b3e-8bac-e47c2b50eaca" />
 
+---
 ### 3. 🧠 Modo Red Neuronal (*Neural Network*)
 - **Regiones Neuronales y Nebulosas:** El directorio raíz y las subcarpetas se representan como núcleos somáticos rodeados por enjambres volumétricos de partículas bioluminiscentes ("nebulosas").
 - **Archivos como Neuronas:** Nodos celulares con anillos dendríticos receptores clasificados por código cromático.
@@ -31,6 +35,7 @@ Axplorer SNX permite conmutar en tiempo real entre tres modos visuales complemen
 - **Pulsos Concéntricos Sutiles:** Ondas cerebrales rítmicas difuminadas que recorren la red con una transparencia del 8% para no interferir con la visibilidad.
 - **Transición con Efecto "Warp":** Al hacer doble clic en una nebulosa, la cámara acelera cinemáticamente con distorsión de campo visual (de 55° a 84°) y estelas de velocidad luz.
 - **Tubo Conector de Retorno (Wormhole Conduit):** Tubo de 10 trazos semitransparentes en espiral que nace en el núcleo y se difumina hacia el exterior, con un portal interactivo para ascender a la carpeta superior al hacer clic.
+<img width="480" height="280" alt="image" src="https://github.com/user-attachments/assets/1fc7de78-1fb5-424a-ba0d-735f9c2695ef" />
 
 ---
 
