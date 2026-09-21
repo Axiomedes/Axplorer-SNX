@@ -1,0 +1,248 @@
+<Window x:Class="aXplorer.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Acerca de Axplorer SNX"
+        Width="618" Height="598"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        KeyDown="Window_KeyDown">
+
+    <Window.Resources>
+        <!-- Estilo de Botón de Cierre de Cabecera -->
+        <Style x:Key="HeaderCloseBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#15FFFFFF"/>
+            <Setter Property="Foreground" Value="#94a3b8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#25FFFFFF"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#ff0055"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#ff3377"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo de Botón Primario Neón -->
+        <Style x:Key="NeonPrimaryBtnStyle" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#00f0ff" Offset="0"/>
+                        <GradientStop Color="#0284c7" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="#030712"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" 
+                                CornerRadius="8" Padding="24,10">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#00f0ff" BlurRadius="12" ShadowDepth="0" Opacity="0.5"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#80ffff" Offset="0"/>
+                                            <GradientStop Color="#38bdf8" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo de Tarjetas de Características -->
+        <Style x:Key="FeatureCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#0c1527"/>
+            <Setter Property="BorderBrush" Value="#2200f0ff"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </Window.Resources>
+
+    <!-- Contenedor Principal con Sombra Flotante -->
+    <Grid Margin="16">
+        <Border CornerRadius="16" BorderThickness="1" BorderBrush="#4000f0ff">
+            <!-- Fondo Oscuro Acrílico con Gradiente -->
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#F0050B17" Offset="0"/>
+                    <GradientStop Color="#FA030610" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <!-- Sombra Exterior Neón -->
+            <Border.Effect>
+                <DropShadowEffect Color="#00f0ff" BlurRadius="28" ShadowDepth="4" Direction="270" Opacity="0.35"/>
+            </Border.Effect>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <!-- Cabecera / Barra de título -->
+                    <RowDefinition Height="*"/>
+                    <!-- Cuerpo deslizable -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Pie con botón aceptar -->
+                </Grid.RowDefinitions>
+
+                <!-- 1. Cabecera (Draggable) -->
+                <Border Grid.Row="0" Background="#10FFFFFF" CornerRadius="16,16,0,0" 
+                        BorderThickness="0,0,0,1" BorderBrush="#2000f0ff" 
+                        Padding="18,12" MouseDown="Header_MouseDown" Cursor="SizeAll">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🔮" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Acerca de Axplorer SNX" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Botón Cerrar -->
+                        <Button Width="32" Height="32" HorizontalAlignment="Right" 
+                                Content="✕" FontSize="14" 
+                                Style="{StaticResource HeaderCloseBtnStyle}" 
+                                Click="BtnClose_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- 2. Cuerpo del Diálogo -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled" Padding="22,14">
+                    <StackPanel>
+                        <!-- Tarjeta Hero -->
+                        <Border CornerRadius="12" Padding="18,16" Margin="0,0,0,16"
+                                BorderThickness="1" BorderBrush="#3500f0ff" Width="562" HorizontalAlignment="Left">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#1800f0ff" Offset="0"/>
+                                    <GradientStop Color="#15b026ff" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <StackPanel HorizontalAlignment="Left">
+                                <!-- Logo Axplorer SNX con Gradiente -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4" Width="189" VerticalAlignment="Top">
+                                    <TextBlock x:Name="TxtAppName" Text="Ax" FontSize="35" FontWeight="Black" FontFamily="Times New Roman" FontStyle="Italic" Width="43">
+                                        <TextBlock.Foreground>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#00f0ff" Offset="0"/>
+                                                <GradientStop Color="#b026ff" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </TextBlock.Foreground>
+                                    </TextBlock>
+                                    <TextBlock x:Name="TxtAppName_Copiar" Text="plorer" FontSize="28" FontWeight="Black" Width="93">
+                                        <TextBlock.Foreground>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#00f0ff" Offset="0"/>
+                                                <GradientStop Color="#b026ff" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </TextBlock.Foreground>
+                                    </TextBlock>
+                                    <Border Background="#00f0ff" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="TxtBrandTag" Text="SNX" FontSize="12" FontWeight="Bold" Foreground="#030712"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Subtítulo -->
+                                <TextBlock x:Name="TxtSubtitle" Text="SPATIAL NEURAL PLEX" FontSize="12" FontWeight="SemiBold" 
+                                           Foreground="#00f0ff" HorizontalAlignment="Center" Margin="0,0,0,8" RenderTransformOrigin="0.532,-0.476"/>
+
+                                <!-- Píldora de Versión -->
+                                <Border Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" 
+                                        CornerRadius="14" Padding="12,4" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="TxtVersion" Text="v0.2.5 • Edición SNX (Windows 10/11)" 
+                                               FontSize="11" Foreground="#94a3b8" FontWeight="Medium"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sección 1: Descripción General -->
+                        <TextBlock x:Name="TxtDescTitle" Text="🌌 Descripción del Sistema" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="TxtDescBody" 
+                                   Text="Axplorer SNX es un navegador y gestor de archivos tridimensional diseñado para transformar la interacción tradicional de carpetas y listas en un ecosistema espacial vivo, continuo e intuitivo." 
+                                   FontSize="12.5" Foreground="#cbd5e1" TextWrapping="Wrap" LineHeight="19" Margin="0,0,0,14"/>
+
+                        <!-- Separador -->
+                        <Rectangle Height="1" Fill="#18FFFFFF" Margin="0,6,0,16"/>
+
+                        <!-- Sección 2: Ficha Técnica & Créditos -->
+                        <TextBlock x:Name="TxtDevTitle" Text="👨‍💻 Datos del Desarrollador &amp; Créditos" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,10"/>
+
+                        <Border Background="#091020" BorderBrush="#2500f0ff" BorderThickness="1" CornerRadius="10" Padding="16,12" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Fila 1: Desarrollador -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Desarrollador:" FontSize="12" Foreground="#64748b" Margin="0,3"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtDevName" FontSize="12" FontWeight="Bold" Foreground="#00f0ff" Margin="0,3"><Run Text="David Rojas"/><Run Language="es-es" Text=" [Axio.UK]"/></TextBlock>
+
+                                <!-- Fila 2: Arquitectura -->
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Arquitectura:" FontSize="12" Foreground="#64748b" Margin="0,3"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtArchitecture" Text="Spatial Neural Plex (SNX Architecture)" FontSize="12" Foreground="#e2e8f0" Margin="0,3"/>
+
+                                <!-- Fila 3: Tecnologías -->
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Tecnologías:" FontSize="12" Foreground="#64748b" Margin="0,3"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtTechnologies" Text="C# 14 • .NET 10 WPF • WebView2 • Three.js WebGL • Win32 API" FontSize="12" Foreground="#e2e8f0" Margin="0,3" TextWrapping="Wrap"/>
+
+                                <!-- Fila 4: Licencia / Año -->
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Licencia / Año:" FontSize="12" Foreground="#64748b" Margin="0,3"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TxtLicenseYear" Text="2026 • Todos los derechos reservados" FontSize="12" Foreground="#94a3b8" Margin="0,3"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 3. Pie con Botón Aceptar -->
+                <Border Grid.Row="2" Background="#10FFFFFF" CornerRadius="0,0,16,16" 
+                        BorderThickness="0,1,0,0" BorderBrush="#2000f0ff" Padding="18,14">
+                    <Button HorizontalAlignment="Left" Content="Aceptar" 
+                            Style="{StaticResource NeonPrimaryBtnStyle}" 
+                            Click="BtnAccept_Click" Margin="445,0,0,0" Width="103"/>
+                </Border>
+            </Grid>
+        </Border>
+        <Image x:Name="Img" Height="90" Source="/Image1.png" Width="266" Stretch="UniformToFill" HorizontalAlignment="Right" Margin="0,90,45,386"/>
+    </Grid>
+</Window>

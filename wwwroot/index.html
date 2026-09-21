@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axplorer SNX - Spatial Neural Plex</title>
+  <link rel="stylesheet" href="css/hud.css">
+</head>
+<body>
+  <!-- 3D Three.js WebGL Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- HUD Overlay Layer -->
+  <div id="hud-overlay">
+    <!-- Top Bar -->
+    <header id="top-bar" class="interactive">
+      <div class="brand-section">
+        <div class="brand-logo">Axplorer <span class="brand-tag">SNX</span></div>
+        <div class="brand-subtitle">Spatial Neural Plex</div>
+      </div>
+
+      <!-- Quick Filter / Search -->
+      <div class="search-container">
+        <input type="text" id="search-input" class="search-input" placeholder="Filtrar elementos..." autocomplete="off">
+      </div>
+
+      <!-- Window Controls -->
+      <div class="window-actions">
+        <button id="btn-about" class="win-btn" title="Acerca de Axplorer SNX">ℹ️</button>
+        <button id="btn-settings" class="win-btn" title="Configuración">⚙️</button>
+        <button id="btn-min" class="win-btn" title="Minimizar">_</button>
+        <button id="btn-max" class="win-btn" title="Maximizar / Restaurar">▢</button>
+        <button id="btn-close" class="win-btn close" title="Cerrar">✕</button>
+      </div>
+    </header>
+
+    <!-- Floating Navigation: In-Canvas Up Button (City-Grid top-left) -->
+    <button id="btn-nav-up" class="nav-up-floating glass-panel" title="Subir nivel superior (Alt + Flecha Arriba / Backspace)" style="display: none;">
+      <span>⬆️</span> Subir Nivel
+    </button>
+
+    <!-- Sidebars Body -->
+    <main class="hud-body">
+      <!-- Left Sidebar: Discos & Accesos Rápidos (Plegable) -->
+      <aside id="sidebar-left" class="sidebar glass-panel">
+        <div class="panel-header" id="header-sidebar-left">
+          <div class="sidebar-title">
+            <span>Ubicaciones</span>
+            <span style="font-size: 14px;">💽</span>
+          </div>
+          <button id="btn-toggle-sidebar-left" class="panel-collapse-btn" title="Plegar / Desplegar panel">▾</button>
+        </div>
+        <div id="sidebar-left-body" class="panel-collapsible-body">
+          <div class="sidebar-subtitle">
+            <span>Unidades de Disco</span>
+            <span style="font-size: 12px;">💾</span>
+          </div>
+          <div id="drives-list" class="list-container"></div>
+
+          <div class="sidebar-subtitle" style="margin-top: 10px;">
+            <span>Accesos Rápidos</span>
+            <span style="font-size: 12px;">⚡</span>
+          </div>
+          <div id="quick-list" class="list-container"></div>
+        </div>
+      </aside>
+
+      <!-- Right Sidebar: Ventanas Activas / Tareas (Plegable) -->
+      <aside id="sidebar-right" class="sidebar glass-panel">
+        <div class="panel-header" id="header-sidebar-right">
+          <div class="sidebar-title">
+            <span>Ventanas Activas</span>
+            <span style="font-size: 14px;">🪟</span>
+          </div>
+          <button id="btn-toggle-sidebar-right" class="panel-collapse-btn" title="Plegar / Desplegar panel">▾</button>
+        </div>
+        <div id="sidebar-right-body" class="panel-collapsible-body">
+          <div id="windows-list" class="list-container"></div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Floating Camera Widget (Plegable) -->
+    <div id="camera-widget" class="glass-panel camera-widget-panel">
+      <div class="panel-header" id="header-camera-widget">
+        <span class="widget-title">📷 Vista 3D</span>
+        <button id="btn-toggle-camera-widget" class="panel-collapse-btn" title="Plegar / Desplegar controles">▾</button>
+      </div>
+      <div id="camera-widget-body" class="panel-collapsible-body camera-btns">
+        <button id="btn-cam-reset" class="cam-btn">
+          <span>🔄</span> Centrar Vista
+        </button>
+        <button id="btn-cam-top" class="cam-btn">
+          <span>📐</span> Vista 2.5D
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Interactive Breadcrumbs & Actions Bar -->
+    <footer id="bottom-bar" class="glass-panel interactive">
+      <!-- Selectable Holographic Breadcrumbs Bar (Aligned Left) -->
+      <div id="breadcrumbs-list" class="breadcrumbs-bar"></div>
+
+      <!-- Actions (Aligned Right) -->
+      <div class="inspector-actions">
+        <button id="btn-action-secondary" class="action-btn secondary" title="Copiar ruta">Copiar Ruta</button>
+        <button id="btn-action-primary" class="action-btn primary" title="Abrir o explorar elemento">
+          <span>🚀</span> Explorar
+        </button>
+      </div>
+    </footer>
+
+    <!-- Color Legend HUD (Plegable) -->
+    <div id="color-legend" class="color-legend glass-panel">
+      <div class="legend-header" id="legend-header">
+        <span class="legend-title">🎨 Leyenda</span>
+        <button id="btn-toggle-legend" class="panel-collapse-btn" title="Plegar / Desplegar leyenda">▾</button>
+      </div>
+      <div id="legend-items" class="legend-grid">
+        <div class="legend-item"><span class="color-dot folder"></span> Carpetas</div>
+        <div class="legend-item"><span class="color-dot document"></span> Documentos</div>
+        <div class="legend-item"><span class="color-dot image"></span> Imágenes</div>
+        <div class="legend-item"><span class="color-dot audio"></span> Audio</div>
+        <div class="legend-item"><span class="color-dot video"></span> Vídeo</div>
+        <div class="legend-item"><span class="color-dot code"></span> Código</div>
+        <div class="legend-item"><span class="color-dot archive"></span> Comprimidos</div>
+        <div class="legend-item"><span class="color-dot executable"></span> Ejecutables</div>
+        <div class="legend-item"><span class="color-dot unknown"></span> Otros</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating 3D Cursor Tooltip -->
+  <div id="node-tooltip"></div>
+
+  <!-- Windows File Explorer Context Menu -->
+  <div id="win-context-menu" class="win-context-menu glass-panel" style="display: none;">
+    <div class="ctx-header">
+      <span class="ctx-header-icon" id="ctx-item-icon">📁</span>
+      <span class="ctx-header-title" id="ctx-item-title">Elemento</span>
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" data-action="open" id="ctx-action-open">
+      <span class="ctx-item-icon">⚡</span>
+      <span class="ctx-item-label" id="ctx-open-label">Abrir</span>
+      <span class="ctx-item-shortcut">Enter</span>
+    </div>
+    <div class="ctx-item" data-action="show_in_folder" id="ctx-action-reveal">
+      <span class="ctx-item-icon">🪟</span>
+      <span class="ctx-item-label">Mostrar en el Explorador</span>
+    </div>
+    <div class="ctx-item" data-action="open_terminal" id="ctx-action-terminal">
+      <span class="ctx-item-icon">💻</span>
+      <span class="ctx-item-label">Abrir en Terminal / PowerShell</span>
+    </div>
+    <div class="ctx-divider" id="ctx-div-clipboard"></div>
+    <div class="ctx-item" data-action="copy_file" id="ctx-action-copy-file">
+      <span class="ctx-item-icon">📋</span>
+      <span class="ctx-item-label">Copiar elemento</span>
+      <span class="ctx-item-shortcut">Ctrl+C</span>
+    </div>
+    <div class="ctx-item" data-action="copy_path" id="ctx-action-copy-path">
+      <span class="ctx-item-icon">🔗</span>
+      <span class="ctx-item-label">Copiar como ruta de acceso</span>
+      <span class="ctx-item-shortcut">Ctrl+Shift+C</span>
+    </div>
+    <div class="ctx-item" data-action="copy_name" id="ctx-action-copy-name">
+      <span class="ctx-item-icon">📝</span>
+      <span class="ctx-item-label">Copiar nombre</span>
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" data-action="refresh" id="ctx-action-refresh" style="display: none;">
+      <span class="ctx-item-icon">🔄</span>
+      <span class="ctx-item-label">Actualizar</span>
+      <span class="ctx-item-shortcut">F5</span>
+    </div>
+    <div class="ctx-item" data-action="navigate_up" id="ctx-action-nav-up" style="display: none;">
+      <span class="ctx-item-icon">⬆️</span>
+      <span class="ctx-item-label">Subir nivel</span>
+      <span class="ctx-item-shortcut">Alt+↑</span>
+    </div>
+    <div class="ctx-item" data-action="properties" id="ctx-action-properties">
+      <span class="ctx-item-icon">🛡️</span>
+      <span class="ctx-item-label">Propiedades</span>
+      <span class="ctx-item-shortcut">Alt+Enter</span>
+    </div>
+  </div>
+
+
+  <!-- Settings Modal Dialog -->
+  <div id="settings-modal" class="modal-backdrop">
+    <div class="settings-dialog glass-panel">
+      <div class="settings-header">
+        <div class="settings-title">
+          <span>⚙️</span> Configuración Visual
+        </div>
+        <button id="btn-close-settings" class="win-btn close" title="Cerrar">✕</button>
+      </div>
+      <div class="settings-body">
+        <!-- Option 0: Estilo de Exploración Visual -->
+        <div class="setting-row highlight-row">
+          <div class="setting-label">
+            <span class="setting-name">Estilo de Exploración</span>
+            <span class="setting-desc">Selecciona el modo de representación visual del sistema</span>
+          </div>
+          <div class="setting-style-toggle">
+            <button id="btn-setting-style-city" class="setting-style-btn active" title="Ciudad en cuadrícula 3D">🏙️ Ciudad</button>
+            <button id="btn-setting-style-plex" class="setting-style-btn" title="Constelación orbital 3D">🌐 Constelación</button>
+            <button id="btn-setting-style-neural" class="setting-style-btn" title="Red Neuronal 3D">🧠 Red Neuronal</button>
+          </div>
+        </div>
+        <!-- Option 1: Aros orbitales de nodos -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Aros de Nodos</span>
+            <span class="setting-desc">Muestra los anillos de rotación individuales en los planetas</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-rings" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Option 2: Líneas de Órbita Concéntricas -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Líneas de Órbita</span>
+            <span class="setting-desc">Muestra las trayectorias orbitales concéntricas del sistema</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-orbit-tracks" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Option 3: Etiquetas de texto -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Etiquetas Permanentes</span>
+            <span class="setting-desc">Si se apaga, las etiquetas solo aparecen al pasar el ratón</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-labels" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Option 4: Intensidad de Resplandor (Glow / Bloom) -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Intensidad de Resplandor (Glow)</span>
+            <span class="setting-desc">Controla la emisión de brillo de los elementos</span>
+          </div>
+          <div class="range-slider-container">
+            <input type="range" id="setting-glow-range" class="range-input" min="0" max="100" value="40">
+            <span id="setting-glow-val" class="range-val">40%</span>
+          </div>
+        </div>
+
+        <!-- Option 5: Polvo Estelar / Partículas de Fondo -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Partículas de Fondo</span>
+            <span class="setting-desc">Polvo estelar sutil en el vacío cósmico</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-particles" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Option 6: Flujo de Datos Asíncrono (Aleatorio) -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Flujo de Datos (Aleatorio)</span>
+            <span class="setting-desc">Paquetes continuos de luz por enlace (Alterno con Pulso)</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-data-pulses" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Option 7: Pulso Concéntrico Sincronizado -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Pulso Concéntrico (Sincronizado)</span>
+            <span class="setting-desc">Ondas concéntricas sincronizadas (Alterno con Flujo)</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-sync-pulses">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Option 8: Velocidad de Flujo y Pulso -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Velocidad de Flujo y Pulso</span>
+            <span class="setting-desc">Regula la velocidad del pulso concéntrico y los paquetes de luz</span>
+          </div>
+          <div class="range-slider-container">
+            <input type="range" id="setting-speed-range" class="range-input" min="20" max="300" value="100">
+            <span id="setting-speed-val" class="range-val">1.0x</span>
+          </div>
+        </div>
+
+        <!-- Option 8.5: Tráfico en Calles (City-Grid) -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Tráfico en Calles 3D</span>
+            <span class="setting-desc">Vehículos lumínicos desplazándose por el grid de la ciudad</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-traffic" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Option 9: Acerca de la Aplicación -->
+        <div class="setting-row highlight-row">
+          <div class="setting-label">
+            <span class="setting-name">Acerca de Axplorer SNX</span>
+            <span class="setting-desc">Información del sistema, arquitectura y desarrollador</span>
+          </div>
+          <button id="btn-open-about-settings" class="action-btn secondary" style="padding: 6px 14px; font-size: 11px;">
+            <span>ℹ️</span> Ver Detalles
+          </button>
+        </div>
+      </div>
+      <div class="settings-footer">
+        <button id="btn-save-settings" class="action-btn primary">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Modal Dialog (Acerca De) -->
+  <div id="about-modal" class="modal-backdrop">
+    <div class="about-dialog glass-panel">
+      <div class="about-header">
+        <div class="about-header-title">
+          <span class="about-header-icon">🔮</span>
+          <span>Acerca de Axplorer SNX</span>
+        </div>
+        <button id="btn-close-about" class="win-btn close" title="Cerrar">✕</button>
+      </div>
+      <div class="about-body">
+        <!-- Hero card -->
+        <div class="about-hero">
+          <div class="about-hero-logo" id="about-hero-logo">Axplorer <span class="brand-tag">SNX</span></div>
+          <div class="about-hero-sub" id="about-hero-sub">Spatial Neural Plex</div>
+          <div class="about-version-pill" id="about-version-pill">v1.2.0 • Edición SNX (Windows 11)</div>
+        </div>
+
+        <!-- App Description -->
+        <div class="about-section">
+          <div class="about-section-title" id="about-desc-title"><span>🌌</span> Descripción del Sistema</div>
+          <p class="about-desc-text" id="about-desc-text">
+            <strong>Axplorer SNX</strong> es un navegador y gestor de archivos tridimensional de próxima generación diseñado para transformar la interacción tradicional de carpetas y listas en un ecosistema espacial vivo, continuo e intuitivo.
+          </p>
+        </div>
+
+        <!-- Developer & Technical Specs -->
+        <div class="about-section">
+          <div class="about-section-title" id="about-dev-title"><span>👨‍💻</span> Datos del Desarrollador & Créditos</div>
+          <div class="about-dev-card">
+            <div class="dev-row">
+              <span class="dev-label">Desarrollador:</span>
+              <span class="dev-value highlight" id="about-dev-name">David Rojas</span>
+            </div>
+            <div class="dev-row">
+              <span class="dev-label">Arquitectura:</span>
+              <span class="dev-value" id="about-dev-arch">Spatial Neural Plex (SNX Architecture)</span>
+            </div>
+            <div class="dev-row">
+              <span class="dev-label">Tecnologías:</span>
+              <span class="dev-value" id="about-dev-tech">C# 14 • .NET 10 WPF • WebView2 • Three.js WebGL • Win32 API</span>
+            </div>
+            <div class="dev-row">
+              <span class="dev-label">Licencia / Año:</span>
+              <span class="dev-value" id="about-dev-license">2026 • Todos los derechos reservados</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="about-footer">
+        <button id="btn-about-ok" class="action-btn primary">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js and Post-Processing Libraries in strict dependency order -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/OrbitControls.js"></script>
+  <script src="lib/CopyShader.js"></script>
+  <script src="lib/LuminosityHighPassShader.js"></script>
+  <script src="lib/EffectComposer.js"></script>
+  <script src="lib/RenderPass.js"></script>
+  <script src="lib/ShaderPass.js"></script>
+  <script src="lib/UnrealBloomPass.js"></script>
+
+  <!-- Application Modules -->
+  <script src="js/engine3d.js"></script>
+  <script src="js/plexGraph.js"></script>
+  <script src="js/cityGrid.js"></script>
+  <script src="js/neuralNetwork.js"></script>
+  <script src="js/hudOverlay.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
