@@ -6,6 +6,7 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
         Title="Axplorer SNX - Spatial Neural Plex"
+        Icon="app.ico"
         Height="880" Width="1440"
         MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen"

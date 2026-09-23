@@ -56,7 +56,6 @@ class HudOverlay {
     this.btnAbout = document.getElementById('btn-about');
     this.btnCloseAbout = document.getElementById('btn-close-about');
     this.btnAboutOk = document.getElementById('btn-about-ok');
-    this.btnOpenAboutSettings = document.getElementById('btn-open-about-settings');
     this.aboutHeroLogo = document.getElementById('about-hero-logo');
     this.aboutHeroSub = document.getElementById('about-hero-sub');
     this.aboutVersionPill = document.getElementById('about-version-pill');
@@ -88,11 +87,48 @@ class HudOverlay {
     this.ctxExternalToolsList = document.getElementById('ctx-external-tools-list');
     this.ctxDivClipboard = document.getElementById('ctx-div-clipboard');
     this.toastEl = document.getElementById('hud-toast');
+    this.ctxActionGallery = document.getElementById('ctx-action-gallery');
+    this.settingGalleryWASD = document.getElementById('setting-gallery-wasd');
     this.activeContextNode = null;
     this.clipboardHasFiles = false;
+    this.pendingGalleryFolder = null;
+
+    // Multi-Selection State & Elements
+    this.selectedNodes = []; // Array of { data: nodeData, mesh: targetMesh }
+    this.contextMode = 'single'; // 'single', 'multi', 'empty_folder', 'empty_root'
+    this.multiSelectionCard = document.getElementById('multi-selection-card');
+    this.multiSelectionHeading = document.getElementById('multi-selection-heading');
+    this.multiSelectionBadge = document.getElementById('multi-selection-badge');
+    this.multiSelectionList = document.getElementById('multi-selection-list');
+    this.btnClearSelection = document.getElementById('btn-clear-selection');
+    this.btnMultiselCopy = document.getElementById('btn-multisel-copy');
+    this.btnMultiselCut = document.getElementById('btn-multisel-cut');
+    this.btnMultiselZip = document.getElementById('btn-multisel-zip');
+    this.btnMultiselMore = document.getElementById('btn-multisel-more');
+
+    // Context Menu Dynamic Labels & Options
+    this.ctxActionCutFile = document.getElementById('ctx-action-cut-file');
+    this.ctxCopyLabel = document.getElementById('ctx-copy-label');
+    this.ctxCopyShortcut = document.getElementById('ctx-copy-shortcut');
+    this.ctxCutLabel = document.getElementById('ctx-cut-label');
+    this.ctxCutShortcut = document.getElementById('ctx-cut-shortcut');
+    this.ctxActionCompressSelected = document.getElementById('ctx-action-compress-selected');
+    this.ctxActionPrintSelected = document.getElementById('ctx-action-print-selected');
+    this.ctxPasteLabel = document.getElementById('ctx-paste-label');
 
     // Traffic Setting Element
     this.settingShowTraffic = document.getElementById('setting-show-traffic');
+
+    // Paste / Copy Progress Elements
+    this.pasteProgressCard = document.getElementById('paste-progress-card');
+    this.pasteTitleText = document.getElementById('paste-title-text');
+    this.btnCancelPaste = document.getElementById('btn-cancel-paste');
+    this.pasteCurrentFile = document.getElementById('paste-current-file');
+    this.pasteMeterFill = document.getElementById('paste-meter-fill');
+    this.pasteItemsCount = document.getElementById('paste-items-count');
+    this.pasteSizeStats = document.getElementById('paste-size-stats');
+    this.pasteSpeedStat = document.getElementById('paste-speed-stat');
+    this.pastePercentStat = document.getElementById('paste-percent-stat');
 
     this.currentViewMode = 'city'; // 'city', 'plex'
     this.currentLevel = 'welcome';
@@ -114,6 +150,19 @@ class HudOverlay {
     document.getElementById('btn-close').addEventListener('click', () => {
       this.bridge.sendMessage('close');
     });
+
+    // Cancel paste button
+    if (this.btnCancelPaste) {
+      this.btnCancelPaste.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.bridge) {
+          this.bridge.sendMessage('cancel_paste');
+        }
+        if (this.pasteTitleText) {
+          this.pasteTitleText.textContent = "Cancelando...";
+        }
+      });
+    }
 
     // Settings Modal Open/Close
     const btnSettings = document.getElementById('btn-settings');
@@ -163,12 +212,6 @@ class HudOverlay {
     if (this.btnAbout) {
       this.btnAbout.addEventListener('click', openAbout);
     }
-    if (this.btnOpenAboutSettings) {
-      this.btnOpenAboutSettings.addEventListener('click', () => {
-        if (this.settingsModalEl) this.settingsModalEl.classList.remove('open');
-        openAbout();
-      });
-    }
     if (this.btnCloseAbout) {
       this.btnCloseAbout.addEventListener('click', closeAbout);
     }
@@ -209,6 +252,9 @@ class HudOverlay {
       }
       if (window.cityGrid) {
         window.cityGrid.setLabelsVisible(isChecked);
+      }
+      if (window.neuralNetwork) {
+        window.neuralNetwork.setLabelsVisible(isChecked);
       }
       this.saveSettings();
     });
@@ -316,6 +362,16 @@ class HudOverlay {
       });
     }
 
+    // Setting: WASD Controls in Gallery Museum
+    if (this.settingGalleryWASD) {
+      this.settingGalleryWASD.addEventListener('change', (e) => {
+        if (window.galleryMuseum) {
+          window.galleryMuseum.setAllowWASD(e.target.checked);
+        }
+        this.saveSettings();
+      });
+    }
+
     // Windows 11 Context Menu Handlers
     if (this.contextMenuEl) {
       this.contextMenuEl.addEventListener('click', (e) => {
@@ -330,6 +386,51 @@ class HudOverlay {
         if (e.button === 0 && !e.target.closest('#win-context-menu')) {
           this.hideContextMenu();
         }
+      });
+    }
+
+    // Floating Multi-Selection Card Event Listeners
+    if (this.btnClearSelection) {
+      this.btnClearSelection.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.clearSelection();
+      });
+    }
+
+    if (this.btnMultiselCopy) {
+      this.btnMultiselCopy.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.executeBatchAction('copy');
+      });
+    }
+
+    if (this.btnMultiselCut) {
+      this.btnMultiselCut.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.executeBatchAction('cut');
+      });
+    }
+
+    if (this.btnMultiselZip) {
+      this.btnMultiselZip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.executeBatchAction('zip');
+      });
+    }
+
+    if (this.btnMultiselMore) {
+      this.btnMultiselMore.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rect = this.btnMultiselMore.getBoundingClientRect();
+        this.showContextMenu(null, rect.left, rect.bottom + 6, null, true);
+      });
+    }
+
+    if (this.multiSelectionCard) {
+      this.multiSelectionCard.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showContextMenu(null, e.clientX, e.clientY, null, true);
       });
     }
 
@@ -440,11 +541,15 @@ class HudOverlay {
       });
     }
 
-    // Keyboard Shortcuts: Alt+Up or Backspace to navigate up with spatial continuity, Escape to close modals
+    // Keyboard Shortcuts: Alt+Up or Backspace to navigate up with spatial continuity, Escape to close modals / clear selection
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (this.contextMenuEl && this.contextMenuEl.style.display !== 'none') {
           this.hideContextMenu();
+          return;
+        }
+        if (this.selectedNodes && this.selectedNodes.length > 0) {
+          this.clearSelection();
           return;
         }
         if (this.aboutModalEl && this.aboutModalEl.classList.contains('open')) {
@@ -460,10 +565,32 @@ class HudOverlay {
 
       // Copy & Paste Shortcuts (Windows File Explorer Style)
       if (e.ctrlKey && !e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+        if (this.selectedNodes && this.selectedNodes.length > 1) {
+          e.preventDefault();
+          this.executeBatchAction('copy');
+          return;
+        }
         const target = this.selectedNodeData || this.activeContextNode;
         if (target && target.fullPath && target.fullPath !== 'welcome' && target.fullPath !== 'root') {
           e.preventDefault();
           this.bridge.sendMessage('copy_file_clipboard', target.fullPath);
+          this.showToast("Copiado al portapapeles");
+          this.clearSelection();
+        }
+      }
+
+      if (e.ctrlKey && !e.shiftKey && (e.key === 'x' || e.key === 'X')) {
+        if (this.selectedNodes && this.selectedNodes.length > 1) {
+          e.preventDefault();
+          this.executeBatchAction('cut');
+          return;
+        }
+        const target = this.selectedNodeData || this.activeContextNode;
+        if (target && target.fullPath && target.fullPath !== 'welcome' && target.fullPath !== 'root') {
+          e.preventDefault();
+          this.bridge.sendMessage('cut_file_clipboard', target.fullPath);
+          this.showToast("Cortado al portapapeles");
+          this.clearSelection();
         }
       }
 
@@ -532,12 +659,8 @@ class HudOverlay {
   /* =========================================================================
    * WINDOWS FILE EXPLORER CONTEXT MENU
    * ========================================================================= */
-  showContextMenu(nodeData, clientX, clientY) {
-    this.activeContextNode = nodeData;
+  showContextMenu(nodeData, clientX, clientY, targetMesh = null, fromMultiCard = false) {
     if (!this.contextMenuEl) return;
-
-    const isItem = !!nodeData;
-    const isDir = isItem && (nodeData.isDirectory || nodeData.isDrive || nodeData.isLibrary || nodeData.itemType === 'system');
 
     // Request fresh clipboard status immediately
     this.bridge.sendMessage('get_clipboard_status');
@@ -550,12 +673,74 @@ class HudOverlay {
       this.ctxDivTools.style.display = 'none';
     }
 
-    const targetPath = (nodeData && nodeData.fullPath) || (current && current.fullPath) || null;
-    if (targetPath && targetPath !== 'welcome' && targetPath !== 'root') {
-      this.bridge.sendMessage('get_external_tools', targetPath);
-    }
+    const current = (this.lastPayload && this.lastPayload.currentNode) || null;
+    const isRealFolder = current && current.fullPath && current.fullPath !== 'welcome' && current.fullPath !== 'root';
 
-    if (isItem) {
+    // Check if target is part of an active multi-selection
+    const isTargetInMulti = nodeData && this.selectedNodes.length > 1 &&
+      this.selectedNodes.some(s => s.data && s.data.fullPath === nodeData.fullPath);
+
+    if (fromMultiCard || isTargetInMulti) {
+      // -------------------------------------------------------------
+      // CONTEXT: MULTI-SELECTION BATCH
+      // -------------------------------------------------------------
+      this.contextMode = 'multi';
+      this.activeContextNode = null;
+      const count = this.selectedNodes.length;
+
+      this.ctxItemIcon.textContent = '📑';
+      this.ctxItemTitle.textContent = `${count} elementos seleccionados`;
+
+      this.ctxActionOpen.style.display = 'none';
+      if (this.ctxActionGallery) this.ctxActionGallery.style.display = 'none';
+      this.ctxActionReveal.style.display = 'none';
+      this.ctxActionTerminal.style.display = 'none';
+
+      // Batch copy / cut
+      this.ctxActionCopyFile.style.display = 'flex';
+      if (this.ctxCopyLabel) this.ctxCopyLabel.textContent = `Copiar (${count})`;
+      if (this.ctxCopyShortcut) this.ctxCopyShortcut.textContent = 'Ctrl+C';
+
+      this.ctxActionCutFile.style.display = 'flex';
+      if (this.ctxCutLabel) this.ctxCutLabel.textContent = `Cortar (${count})`;
+      if (this.ctxCutShortcut) this.ctxCutShortcut.textContent = 'Ctrl+X';
+
+      // Paste not available directly on multi-item selection
+      if (this.ctxActionPasteFile) this.ctxActionPasteFile.style.display = 'none';
+
+      // Batch compress and print
+      if (this.ctxActionCompressSelected) this.ctxActionCompressSelected.style.display = 'flex';
+      if (this.ctxActionPrintSelected) this.ctxActionPrintSelected.style.display = 'flex';
+
+      this.ctxActionCopyPath.style.display = 'flex';
+      const pathLabel = document.getElementById('ctx-copy-path-label');
+      if (pathLabel) pathLabel.textContent = 'Copiar rutas de acceso';
+
+      this.ctxActionCopyName.style.display = 'none';
+      if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = 'block';
+      this.ctxActionRefresh.style.display = 'none';
+      this.ctxActionNavUp.style.display = 'none';
+      this.ctxActionProperties.style.display = 'none';
+
+    } else if (nodeData) {
+      // -------------------------------------------------------------
+      // CONTEXT: SINGLE ELEMENT
+      // -------------------------------------------------------------
+      this.contextMode = 'single';
+      this.activeContextNode = nodeData;
+
+      // If we previously had multi-selection and right-clicked on an unselected item, select only this one
+      if (this.selectedNodes.length > 1) {
+        this.clearSelection(true);
+        this.selectedNodes = [{ data: nodeData, mesh: targetMesh }];
+        if (targetMesh && window.engine3d) {
+          window.engine3d.setNodeSelected(targetMesh, true);
+        }
+        this.updateInspector(nodeData);
+        this.updateMultiSelectionUI();
+      }
+
+      const isDir = nodeData.isDirectory || nodeData.isDrive || nodeData.isLibrary || nodeData.itemType === 'system';
       const iconMap = {
         folder: '📁', document: '📄', image: '🖼️', audio: '🎵', video: '🎬',
         code: '💻', archive: '📦', executable: '⚙️', drive: '💽', network: '🌐'
@@ -565,39 +750,119 @@ class HudOverlay {
       this.ctxOpenLabel.textContent = isDir ? 'Explorar' : 'Abrir';
 
       this.ctxActionOpen.style.display = 'flex';
+      if (this.ctxActionGallery) {
+        const isFolderItem = isDir && nodeData.fullPath && nodeData.fullPath !== 'welcome' && nodeData.fullPath !== 'root';
+        this.ctxActionGallery.style.display = isFolderItem ? 'flex' : 'none';
+      }
       this.ctxActionReveal.style.display = 'flex';
       this.ctxActionTerminal.style.display = isDir ? 'flex' : 'none';
+
+      // Single item: "Copiar" and "Cortar"
       this.ctxActionCopyFile.style.display = 'flex';
+      if (this.ctxCopyLabel) this.ctxCopyLabel.textContent = 'Copiar';
+      if (this.ctxCopyShortcut) this.ctxCopyShortcut.textContent = 'Ctrl+C';
+
+      this.ctxActionCutFile.style.display = 'flex';
+      if (this.ctxCutLabel) this.ctxCutLabel.textContent = 'Cortar';
+      if (this.ctxCutShortcut) this.ctxCutShortcut.textContent = 'Ctrl+X';
+
       if (this.ctxActionPasteFile) {
-        // "Pegar" is ONLY visible if clipboard actually contains files and destination is a folder
         this.ctxActionPasteFile.style.display = (this.clipboardHasFiles && isDir) ? 'flex' : 'none';
+        if (this.ctxPasteLabel) this.ctxPasteLabel.textContent = 'Pegar';
       }
+
+      if (this.ctxActionCompressSelected) this.ctxActionCompressSelected.style.display = 'none';
+      if (this.ctxActionPrintSelected) this.ctxActionPrintSelected.style.display = 'none';
+
       this.ctxActionCopyPath.style.display = 'flex';
+      const pathLabel = document.getElementById('ctx-copy-path-label');
+      if (pathLabel) pathLabel.textContent = 'Copiar como ruta de acceso';
+
       this.ctxActionCopyName.style.display = 'flex';
       if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = 'block';
       this.ctxActionRefresh.style.display = 'none';
       this.ctxActionNavUp.style.display = 'none';
       this.ctxActionProperties.style.display = 'flex';
-    } else {
-      // Background context menu (Current Folder Workspace)
-      const current = (this.lastPayload && this.lastPayload.currentNode) || null;
-      const isRealFolder = current && current.fullPath && current.fullPath !== 'welcome' && current.fullPath !== 'root';
-      this.ctxItemIcon.textContent = '🏙️';
-      this.ctxItemTitle.textContent = current ? (current.name || 'Carpeta actual') : 'Espacio 3D';
-      this.ctxActionOpen.style.display = 'none';
-      this.ctxActionReveal.style.display = current && current.fullPath ? 'flex' : 'none';
-      this.ctxActionTerminal.style.display = isRealFolder ? 'flex' : 'none';
-      this.ctxActionCopyFile.style.display = 'none';
-      if (this.ctxActionPasteFile) {
-        // "Pegar" is ONLY visible if clipboard actually contains files and current location is a real folder
-        this.ctxActionPasteFile.style.display = (this.clipboardHasFiles && isRealFolder) ? 'flex' : 'none';
+
+      if (nodeData.fullPath && nodeData.fullPath !== 'welcome' && nodeData.fullPath !== 'root') {
+        this.bridge.sendMessage('get_external_tools', nodeData.fullPath);
       }
-      this.ctxActionCopyPath.style.display = current && current.fullPath ? 'flex' : 'none';
-      this.ctxActionCopyName.style.display = 'none';
-      if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = isRealFolder ? 'block' : 'none';
-      this.ctxActionRefresh.style.display = 'flex';
-      this.ctxActionNavUp.style.display = this.currentLevel !== 'welcome' ? 'flex' : 'none';
-      this.ctxActionProperties.style.display = current && current.fullPath ? 'flex' : 'none';
+
+    } else {
+      // -------------------------------------------------------------
+      // CONTEXT: EMPTY AREA
+      // -------------------------------------------------------------
+      this.activeContextNode = null;
+      if (this.selectedNodes.length > 0) {
+        this.clearSelection(true);
+      }
+
+      if (isRealFolder) {
+        // Empty area inside a real folder or drive:
+        // "Copiar Todo", "Cortar Todo", and "Pegar" (if clipboard contains items)
+        this.contextMode = 'empty_folder';
+        this.ctxItemIcon.textContent = '🏙️';
+        this.ctxItemTitle.textContent = current ? (current.name || 'Carpeta actual') : 'Carpeta actual';
+
+        this.ctxActionOpen.style.display = 'none';
+        if (this.ctxActionGallery) {
+          this.ctxActionGallery.style.display = 'flex';
+        }
+        this.ctxActionReveal.style.display = 'flex';
+        this.ctxActionTerminal.style.display = 'flex';
+
+        this.ctxActionCopyFile.style.display = 'flex';
+        if (this.ctxCopyLabel) this.ctxCopyLabel.textContent = 'Copiar Todo';
+        if (this.ctxCopyShortcut) this.ctxCopyShortcut.textContent = 'Ctrl+A, C';
+
+        this.ctxActionCutFile.style.display = 'flex';
+        if (this.ctxCutLabel) this.ctxCutLabel.textContent = 'Cortar Todo';
+        if (this.ctxCutShortcut) this.ctxCutShortcut.textContent = 'Ctrl+A, X';
+
+        if (this.ctxActionPasteFile) {
+          this.ctxActionPasteFile.style.display = this.clipboardHasFiles ? 'flex' : 'none';
+          if (this.ctxPasteLabel) this.ctxPasteLabel.textContent = 'Pegar';
+        }
+
+        if (this.ctxActionCompressSelected) this.ctxActionCompressSelected.style.display = 'none';
+        if (this.ctxActionPrintSelected) this.ctxActionPrintSelected.style.display = 'none';
+
+        this.ctxActionCopyPath.style.display = 'flex';
+        const pathLabel = document.getElementById('ctx-copy-path-label');
+        if (pathLabel) pathLabel.textContent = 'Copiar como ruta de acceso';
+
+        this.ctxActionCopyName.style.display = 'none';
+        if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = 'block';
+        this.ctxActionRefresh.style.display = 'flex';
+        this.ctxActionNavUp.style.display = this.currentLevel !== 'welcome' ? 'flex' : 'none';
+        this.ctxActionProperties.style.display = 'flex';
+
+        if (current.fullPath) {
+          this.bridge.sendMessage('get_external_tools', current.fullPath);
+        }
+
+      } else {
+        // Empty space in Root (Mi PC) or Welcome hub
+        this.contextMode = 'empty_root';
+        this.ctxItemIcon.textContent = '🌌';
+        this.ctxItemTitle.textContent = 'Espacio 3D';
+
+        this.ctxActionOpen.style.display = 'none';
+        if (this.ctxActionGallery) this.ctxActionGallery.style.display = 'none';
+        this.ctxActionReveal.style.display = 'none';
+        this.ctxActionTerminal.style.display = 'none';
+        this.ctxActionCopyFile.style.display = 'none';
+        this.ctxActionCutFile.style.display = 'none';
+        if (this.ctxActionPasteFile) this.ctxActionPasteFile.style.display = 'none';
+        if (this.ctxActionCompressSelected) this.ctxActionCompressSelected.style.display = 'none';
+        if (this.ctxActionPrintSelected) this.ctxActionPrintSelected.style.display = 'none';
+        this.ctxActionCopyPath.style.display = 'none';
+        this.ctxActionCopyName.style.display = 'none';
+        if (this.ctxDivClipboard) this.ctxDivClipboard.style.display = 'none';
+        this.ctxActionRefresh.style.display = 'flex';
+        this.ctxActionNavUp.style.display = this.currentLevel !== 'welcome' ? 'flex' : 'none';
+        this.ctxActionProperties.style.display = 'none';
+      }
     }
 
     // Position context menu with boundary safety
@@ -655,6 +920,15 @@ class HudOverlay {
         }
         break;
 
+      case 'open_gallery':
+        {
+          const folderPath = (node && (node.isDirectory || node.isDrive)) ? node.fullPath : (current ? current.fullPath : null);
+          if (folderPath && folderPath !== 'welcome' && folderPath !== 'root') {
+            this.openGalleryMode(folderPath);
+          }
+        }
+        break;
+
       case 'show_in_folder':
         if (targetPath) {
           this.bridge.sendMessage('show_in_folder', targetPath);
@@ -668,8 +942,42 @@ class HudOverlay {
         break;
 
       case 'copy_file':
-        if (targetPath) {
-          this.bridge.sendMessage('copy_file_clipboard', targetPath);
+        if (this.contextMode === 'multi') {
+          this.executeBatchAction('copy');
+        } else if (this.contextMode === 'empty_folder') {
+          const children = (this.lastPayload && this.lastPayload.children) || [];
+          const paths = children.map(c => c.fullPath).filter(p => p && p !== 'welcome' && p !== 'root');
+          if (paths.length > 0) {
+            this.bridge.sendMessage('copy_multiple_clipboard', paths);
+            this.showToast(`${paths.length} elementos copiados al portapapeles`);
+          }
+          this.clearSelection();
+        } else {
+          if (targetPath) {
+            this.bridge.sendMessage('copy_file_clipboard', targetPath);
+            this.showToast("Copiado al portapapeles");
+          }
+          this.clearSelection();
+        }
+        break;
+
+      case 'cut_file':
+        if (this.contextMode === 'multi') {
+          this.executeBatchAction('cut');
+        } else if (this.contextMode === 'empty_folder') {
+          const children = (this.lastPayload && this.lastPayload.children) || [];
+          const paths = children.map(c => c.fullPath).filter(p => p && p !== 'welcome' && p !== 'root');
+          if (paths.length > 0) {
+            this.bridge.sendMessage('cut_multiple_clipboard', paths);
+            this.showToast(`${paths.length} elementos cortados al portapapeles`);
+          }
+          this.clearSelection();
+        } else {
+          if (targetPath) {
+            this.bridge.sendMessage('cut_file_clipboard', targetPath);
+            this.showToast("Cortado al portapapeles");
+          }
+          this.clearSelection();
         }
         break;
 
@@ -683,17 +991,33 @@ class HudOverlay {
         }
         break;
 
+      case 'compress_selected':
+        this.executeBatchAction('zip');
+        break;
+
+      case 'print_selected':
+        this.executeBatchAction('print');
+        break;
+
       case 'copy_path':
-        if (targetPath) {
+        if (this.contextMode === 'multi') {
+          const text = this.selectedNodes.map(n => `"${n.data.fullPath}"`).join('\n');
+          navigator.clipboard.writeText(text);
+          this.showToast(`${this.selectedNodes.length} rutas copiadas`);
+          this.clearSelection();
+        } else if (targetPath) {
           navigator.clipboard.writeText(targetPath);
+          this.showToast("Ruta copiada al portapapeles");
         }
         break;
 
       case 'copy_name':
         if (node && node.name) {
           navigator.clipboard.writeText(node.name);
+          this.showToast("Nombre copiado");
         } else if (current && current.name) {
           navigator.clipboard.writeText(current.name);
+          this.showToast("Nombre copiado");
         }
         break;
 
@@ -764,6 +1088,7 @@ class HudOverlay {
   }
 
   updateGraph(payload) {
+    this.clearSelection();
     this.lastPayload = payload;
     this.renderBreadcrumbs(payload.breadcrumbs || []);
     this.renderDrives(payload.drives || []);
@@ -771,6 +1096,25 @@ class HudOverlay {
     this.renderWindows(payload.windows || []);
     this.updateInspector(payload.currentNode);
     this.searchInput.value = '';
+
+    if (this.pendingGalleryFolder && payload.currentNode && payload.currentNode.fullPath === this.pendingGalleryFolder) {
+      this.pendingGalleryFolder = null;
+      if (window.galleryMuseum) {
+        window.galleryMuseum.enterGallery(payload);
+      }
+    }
+  }
+
+  openGalleryMode(folderPath) {
+    const current = (this.lastPayload && this.lastPayload.currentNode) || null;
+    if (current && current.fullPath === folderPath) {
+      if (window.galleryMuseum) {
+        window.galleryMuseum.enterGallery(this.lastPayload);
+      }
+    } else {
+      this.pendingGalleryFolder = folderPath;
+      this.bridge.sendMessage('navigate', folderPath);
+    }
   }
 
   updateBreadcrumbs(crumbs) {
@@ -987,6 +1331,10 @@ class HudOverlay {
       }
     }
 
+    if (window.galleryMuseum && window.galleryMuseum.galleryGroup) {
+      window.galleryMuseum.galleryGroup.visible = false;
+    }
+
     if (mode === 'city') {
       if (this.colorLegendEl && this.currentLevel === 'city') {
         this.colorLegendEl.style.display = 'block';
@@ -1005,6 +1353,8 @@ class HudOverlay {
         } else {
           window.cityGrid.buildCityGrid(this.lastPayload);
         }
+        const showLabels = this.settingShowLabels ? this.settingShowLabels.checked : true;
+        window.cityGrid.setLabelsVisible(showLabels);
       }
     } else if (mode === 'plex') {
       if (this.colorLegendEl) this.colorLegendEl.style.display = 'none';
@@ -1013,6 +1363,8 @@ class HudOverlay {
         if (window.neuralNetwork) window.neuralNetwork.neuralGroup.visible = false;
         window.plexGraph.graphGroup.visible = true;
         window.plexGraph.loadData(this.lastPayload);
+        const showLabels = this.settingShowLabels ? this.settingShowLabels.checked : true;
+        window.plexGraph.setLabelsVisible(showLabels);
       }
     } else if (mode === 'neural') {
       if (this.colorLegendEl) this.colorLegendEl.style.display = 'none';
@@ -1021,6 +1373,8 @@ class HudOverlay {
         if (window.plexGraph) window.plexGraph.graphGroup.visible = false;
         window.neuralNetwork.neuralGroup.visible = true;
         window.neuralNetwork.loadData(this.lastPayload);
+        const showLabels = this.settingShowLabels ? this.settingShowLabels.checked : true;
+        window.neuralNetwork.setLabelsVisible(showLabels);
       }
     }
   }
@@ -1047,7 +1401,7 @@ class HudOverlay {
           this.settingShowLabels.checked = s.showLabels;
           if (window.plexGraph) window.plexGraph.setLabelsVisible(s.showLabels);
           if (window.cityGrid) window.cityGrid.setLabelsVisible(s.showLabels);
-          if (window.neuralNetwork) window.neuralNetwork.showLabels = s.showLabels;
+          if (window.neuralNetwork) window.neuralNetwork.setLabelsVisible(s.showLabels);
         }
         if (s.glow !== undefined && this.settingGlowRange) {
           this.settingGlowRange.value = s.glow;
@@ -1086,6 +1440,10 @@ class HudOverlay {
           this.settingShowTraffic.checked = s.showTraffic;
           if (window.cityGrid) window.cityGrid.setTrafficVisible(s.showTraffic);
         }
+        if (s.galleryWASD !== undefined && this.settingGalleryWASD) {
+          this.settingGalleryWASD.checked = s.galleryWASD;
+          if (window.galleryMuseum) window.galleryMuseum.setAllowWASD(s.galleryWASD);
+        }
       }
     } catch (e) {
       console.warn("No se pudieron cargar los ajustes:", e);
@@ -1104,7 +1462,8 @@ class HudOverlay {
         showDataPulses: this.settingShowDataPulses ? this.settingShowDataPulses.checked : true,
         showSyncPulses: this.settingShowSyncPulses ? this.settingShowSyncPulses.checked : false,
         pulseSpeed: this.settingSpeedRange ? parseInt(this.settingSpeedRange.value, 10) : 100,
-        showTraffic: this.settingShowTraffic ? this.settingShowTraffic.checked : true
+        showTraffic: this.settingShowTraffic ? this.settingShowTraffic.checked : true,
+        galleryWASD: this.settingGalleryWASD ? this.settingGalleryWASD.checked : false
       };
       localStorage.setItem('axplorer_settings', JSON.stringify(s));
     } catch (e) {
@@ -1135,13 +1494,17 @@ class HudOverlay {
   setClipboardStatus(hasFiles) {
     this.clipboardHasFiles = !!hasFiles;
     if (this.contextMenuEl && this.contextMenuEl.style.display !== 'none' && this.ctxActionPasteFile) {
-      const node = this.activeContextNode;
-      const isItem = !!node;
-      const isDir = isItem && (node.isDirectory || node.isDrive || node.isLibrary || node.itemType === 'system');
-      const current = (this.lastPayload && this.lastPayload.currentNode) || null;
-      const isRealFolder = current && current.fullPath && current.fullPath !== 'welcome' && current.fullPath !== 'root';
-      const canPaste = this.clipboardHasFiles && (isDir || (!isItem && isRealFolder));
-      this.ctxActionPasteFile.style.display = canPaste ? 'flex' : 'none';
+      if (this.contextMode === 'multi') {
+        this.ctxActionPasteFile.style.display = 'none';
+      } else if (this.contextMode === 'single') {
+        const node = this.activeContextNode;
+        const isDir = node && (node.isDirectory || node.isDrive || node.isLibrary || node.itemType === 'system');
+        this.ctxActionPasteFile.style.display = (this.clipboardHasFiles && isDir) ? 'flex' : 'none';
+      } else if (this.contextMode === 'empty_folder') {
+        this.ctxActionPasteFile.style.display = this.clipboardHasFiles ? 'flex' : 'none';
+      } else {
+        this.ctxActionPasteFile.style.display = 'none';
+      }
     }
   }
 
@@ -1187,6 +1550,251 @@ class HudOverlay {
       }
 
       this.ctxExternalToolsList.appendChild(el);
+    }
+  }
+
+  updatePasteProgress(data) {
+    if (!this.pasteProgressCard) {
+      this.pasteProgressCard = document.getElementById('paste-progress-card');
+    }
+    if (!this.pasteProgressCard) return;
+
+    if (this.pasteProgressCard.style.display === 'none') {
+      this.pasteProgressCard.style.display = 'block';
+      void this.pasteProgressCard.offsetWidth;
+      this.pasteProgressCard.classList.add('visible');
+    }
+
+    if (data.status === 'calculating') {
+      if (this.pasteTitleText) this.pasteTitleText.textContent = "Preparando copia...";
+      if (this.pasteCurrentFile) this.pasteCurrentFile.textContent = data.message || "Analizando elementos...";
+      if (this.pasteMeterFill) this.pasteMeterFill.style.width = "0%";
+      if (this.pasteItemsCount) this.pasteItemsCount.textContent = "Calculando...";
+      if (this.pasteSizeStats) this.pasteSizeStats.textContent = "--";
+      if (this.pasteSpeedStat) this.pasteSpeedStat.textContent = "--";
+      if (this.pastePercentStat) this.pastePercentStat.textContent = "0%";
+      return;
+    }
+
+    if (data.status === 'cancelled') {
+      if (this.pasteTitleText) this.pasteTitleText.textContent = "Cancelado";
+      if (this.pasteCurrentFile) this.pasteCurrentFile.textContent = data.message || "Operación cancelada";
+      if (this.pasteSpeedStat) this.pasteSpeedStat.textContent = "0 B/s";
+      this.hidePasteProgress(1200);
+      return;
+    }
+
+    if (data.status === 'completed') {
+      if (this.pasteTitleText) this.pasteTitleText.textContent = "Completado";
+      if (this.pasteCurrentFile) this.pasteCurrentFile.textContent = data.message || "Transferencia finalizada";
+      if (this.pasteMeterFill) this.pasteMeterFill.style.width = "100%";
+      if (this.pastePercentStat) this.pastePercentStat.textContent = "100%";
+      if (this.pasteSpeedStat) this.pasteSpeedStat.textContent = "0 B/s";
+      this.hidePasteProgress(1400);
+      return;
+    }
+
+    if (data.status === 'error') {
+      if (this.pasteTitleText) this.pasteTitleText.textContent = "Error";
+      if (this.pasteCurrentFile) this.pasteCurrentFile.textContent = data.message || "Error al transferir";
+      this.hidePasteProgress(2000);
+      return;
+    }
+
+    if (this.pasteTitleText) this.pasteTitleText.textContent = "Copiando elementos...";
+    if (this.pasteCurrentFile) {
+      this.pasteCurrentFile.textContent = data.currentFileName || data.message || "...";
+      this.pasteCurrentFile.title = data.currentFileName || "";
+    }
+
+    const percent = Math.min(100, Math.max(0, data.percent || 0));
+    if (this.pasteMeterFill) {
+      this.pasteMeterFill.style.width = `${percent}%`;
+    }
+
+    if (this.pasteItemsCount) {
+      this.pasteItemsCount.textContent = `${data.filesCopied || 0} / ${data.totalFiles || 0} archivos`;
+    }
+
+    if (this.pasteSizeStats) {
+      const copiedFormatted = this.formatBytes(data.bytesCopied || 0);
+      const totalFormatted = this.formatBytes(data.totalBytes || 0);
+      this.pasteSizeStats.textContent = `${copiedFormatted} / ${totalFormatted}`;
+    }
+
+    if (this.pasteSpeedStat) {
+      this.pasteSpeedStat.textContent = data.formattedSpeed || "0 B/s";
+    }
+
+    if (this.pastePercentStat) {
+      this.pastePercentStat.textContent = `${Math.round(percent)}%`;
+    }
+  }
+
+  hidePasteProgress(delay = 600) {
+    if (!this.pasteProgressCard) return;
+    if (this._pasteHideTimer) clearTimeout(this._pasteHideTimer);
+    this._pasteHideTimer = setTimeout(() => {
+      this.pasteProgressCard.classList.remove('visible');
+      setTimeout(() => {
+        this.pasteProgressCard.style.display = 'none';
+        if (this.pasteMeterFill) this.pasteMeterFill.style.width = '0%';
+      }, 260);
+    }, delay);
+  }
+
+  formatBytes(bytes) {
+    if (bytes == null || isNaN(bytes) || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const val = (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1);
+    return `${val} ${units[i] || 'TB'}`;
+  }
+
+  /* =========================================================================
+   * MULTI-SELECTION AND BATCH OPERATIONS
+   * ========================================================================= */
+  handleNodeClick(nodeData, event, targetMesh) {
+    if (!nodeData) return;
+
+    const isMultiKey = event && (event.ctrlKey || event.shiftKey);
+
+    if (isMultiKey) {
+      if (event.preventDefault) event.preventDefault();
+      const existingIdx = this.selectedNodes.findIndex(n => n.data && n.data.fullPath === nodeData.fullPath);
+      if (existingIdx >= 0) {
+        // Unselect this item
+        const removed = this.selectedNodes.splice(existingIdx, 1)[0];
+        if (removed.mesh && window.engine3d) {
+          window.engine3d.setNodeSelected(removed.mesh, false);
+        }
+      } else {
+        // Add to selection
+        this.selectedNodes.push({ data: nodeData, mesh: targetMesh });
+        if (targetMesh && window.engine3d) {
+          window.engine3d.setNodeSelected(targetMesh, true);
+        }
+      }
+      if (this.selectedNodes.length > 0) {
+        const last = this.selectedNodes[this.selectedNodes.length - 1];
+        this.updateInspector(last.data);
+      }
+    } else {
+      // Single selection: clear previous selection halos
+      this.clearSelection(false);
+      if (window.engine3d) {
+        window.engine3d.clearAllSelectionHalos();
+      }
+      this.selectedNodes = [{ data: nodeData, mesh: targetMesh }];
+      if (targetMesh && window.engine3d) {
+        window.engine3d.setNodeSelected(targetMesh, true);
+      }
+      this.updateInspector(nodeData);
+    }
+
+    this.updateMultiSelectionUI();
+  }
+
+  handleBackgroundClick(event) {
+    const isMultiKey = event && (event.ctrlKey || event.shiftKey);
+    if (!isMultiKey) {
+      this.clearSelection();
+    }
+    this.hideContextMenu();
+  }
+
+  executeBatchAction(action) {
+    if (!this.selectedNodes || this.selectedNodes.length === 0) return;
+    const paths = this.selectedNodes
+      .map(n => n.data && n.data.fullPath)
+      .filter(p => p && p !== 'welcome' && p !== 'root');
+
+    if (paths.length === 0) return;
+
+    switch (action) {
+      case 'copy':
+        this.bridge.sendMessage('copy_multiple_clipboard', paths);
+        this.showToast(`${paths.length} elementos copiados al portapapeles`);
+        break;
+      case 'cut':
+        this.bridge.sendMessage('cut_multiple_clipboard', paths);
+        this.showToast(`${paths.length} elementos cortados al portapapeles`);
+        break;
+      case 'zip':
+      case 'compress':
+        this.bridge.sendMessage('compress_items', paths);
+        this.showToast(`Comprimiendo ${paths.length} elementos...`);
+        break;
+      case 'print':
+        this.bridge.sendMessage('print_items', paths);
+        this.showToast(`Enviando ${paths.length} documentos a la impresora...`);
+        break;
+    }
+
+    // Once executed, clear selection and hide floating card as requested
+    this.clearSelection();
+  }
+
+  clearSelection(clearHalos = true) {
+    if (clearHalos && window.engine3d) {
+      window.engine3d.clearAllSelectionHalos();
+    }
+    this.selectedNodes = [];
+    this.updateMultiSelectionUI();
+  }
+
+  updateMultiSelectionUI() {
+    if (!this.multiSelectionCard) return;
+
+    const count = this.selectedNodes.length;
+    if (count > 1) {
+      if (this.multiSelectionBadge) {
+        this.multiSelectionBadge.textContent = count;
+      }
+      if (this.multiSelectionList) {
+        this.multiSelectionList.innerHTML = '';
+        const iconMap = {
+          folder: '📁', document: '📄', image: '🖼️', audio: '🎵', video: '🎬',
+          code: '💻', archive: '📦', executable: '⚙️', drive: '💽', network: '🌐'
+        };
+
+        this.selectedNodes.forEach((item, index) => {
+          const row = document.createElement('div');
+          row.className = 'multi-item-row';
+          const icon = iconMap[item.data.itemType] || (item.data.isDirectory ? '📁' : '📄');
+          const name = item.data.name || 'Elemento';
+
+          row.innerHTML = `
+            <div class="multi-item-info" title="${item.data.fullPath || name}">
+              <span class="multi-item-icon">${icon}</span>
+              <span class="multi-item-name">${name}</span>
+            </div>
+            <button class="multi-remove-btn" title="Quitar de selección">✕</button>
+          `;
+
+          const removeBtn = row.querySelector('.multi-remove-btn');
+          if (removeBtn) {
+            removeBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (item.mesh && window.engine3d) {
+                window.engine3d.setNodeSelected(item.mesh, false);
+              }
+              this.selectedNodes.splice(index, 1);
+              this.updateMultiSelectionUI();
+            });
+          }
+
+          this.multiSelectionList.appendChild(row);
+        });
+      }
+
+      this.multiSelectionCard.style.display = 'block';
+      requestAnimationFrame(() => {
+        this.multiSelectionCard.classList.add('visible');
+      });
+    } else {
+      this.multiSelectionCard.classList.remove('visible');
+      this.multiSelectionCard.style.display = 'none';
     }
   }
 }

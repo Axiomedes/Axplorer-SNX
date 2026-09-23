@@ -72,6 +72,18 @@ class NeuralNetwork {
     this.sharedSmallPulseGeo = new THREE.SphereGeometry(0.12, 6, 6);
   }
 
+  setLabelsVisible(visible) {
+    this.showLabels = visible;
+    if (this.labelSprites) {
+      for (let i = 0; i < this.labelSprites.length; i++) {
+        const item = this.labelSprites[i];
+        if (item && item.sprite) {
+          item.sprite.visible = visible;
+        }
+      }
+    }
+  }
+
   /* =========================================================================
    * CLEAR / DISPOSE
    * ========================================================================= */
@@ -321,11 +333,13 @@ class NeuralNetwork {
       nucleus.scale.set(1.15, 1.15, 1.15);
       nucleusMat.emissiveIntensity = 1.2;
       shieldMat.opacity = 0.55;
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
     group.onHoverExit = () => {
       nucleus.scale.set(1, 1, 1);
       nucleusMat.emissiveIntensity = 0.85;
       shieldMat.opacity = 0.28;
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     nucleus.userData = group.userData;
@@ -392,12 +406,14 @@ class NeuralNetwork {
       somaMat.emissiveIntensity = 1.1;
       halo.scale.set(1.2, 1.2, 1.2);
       haloMat.opacity = 0.85;
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
     group.onHoverExit = () => {
       soma.scale.set(1, 1, 1);
       somaMat.emissiveIntensity = 0.65;
       halo.scale.set(1, 1, 1);
       haloMat.opacity = 0.45;
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     soma.userData = group.userData;
@@ -460,11 +476,13 @@ class NeuralNetwork {
       soma.scale.set(1.25, 1.25, 1.25);
       somaMat.emissiveIntensity = 0.95;
       ringMat.opacity = 0.75;
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
     group.onHoverExit = () => {
       soma.scale.set(1, 1, 1);
       somaMat.emissiveIntensity = data.hasRecentActivity ? 0.75 : 0.42;
       ringMat.opacity = 0.35;
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     soma.userData = group.userData;
@@ -976,6 +994,7 @@ class NeuralNetwork {
     // Etiqueta flotante
     const labelSprite = this.createNeuralLabel(`⬆️ ${parentName || 'Carpeta Superior'}`, 0x00f0ff, true);
     labelSprite.position.set(0, 3.2, 0);
+    labelSprite.visible = this.showLabels;
     portalGroup.add(labelSprite);
     this.labelSprites.push({ sprite: labelSprite, isCenter: true, group: portalGroup });
 
@@ -985,12 +1004,14 @@ class NeuralNetwork {
       portalOrb.scale.set(1.2, 1.2, 1.2);
       portalRingMat.emissiveIntensity = 1.4;
       portalOrbMat.emissiveIntensity = 1.5;
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
     portalGroup.onHoverExit = () => {
       portalRing.scale.set(1, 1, 1);
       portalOrb.scale.set(1, 1, 1);
       portalRingMat.emissiveIntensity = 0.85;
       portalOrbMat.emissiveIntensity = 0.9;
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     portalRing.userData = portalGroup.userData;
@@ -1198,7 +1219,7 @@ class NeuralNetwork {
     }
 
     // 5. Zoom-Invariant Text Labels
-    if (this.showLabels && this.engine.camera) {
+    if (this.engine.camera && this.labelSprites) {
       const camPos = this.engine.camera.position;
       for (let l = 0; l < this.labelSprites.length; l++) {
         const item = this.labelSprites[l];

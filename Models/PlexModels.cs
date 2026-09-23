@@ -24,6 +24,9 @@ namespace aXplorer.Models
         public bool IsNetwork { get; set; }
         public bool IsLibrary { get; set; }
         public string DriveTypeDescription { get; set; } = string.Empty;
+        public int? ImageWidth { get; set; }
+        public int? ImageHeight { get; set; }
+        public string? Resolution { get; set; }
     }
 
     public class WindowNode
@@ -62,5 +65,20 @@ namespace aXplorer.Models
         public string? ToolId { get; set; }
         public int? ScreenX { get; set; }
         public int? ScreenY { get; set; }
+    }
+
+    public class PasteProgressInfo
+    {
+        public string Status { get; set; } = "copying"; // "calculating", "copying", "completed", "cancelled", "error"
+        public string CurrentFileName { get; set; } = string.Empty;
+        public int FilesCopied { get; set; }
+        public int TotalFiles { get; set; }
+        public long BytesCopied { get; set; }
+        public long TotalBytes { get; set; }
+        public double Percent { get; set; }
+        public double BytesPerSecond { get; set; }
+        public string FormattedSpeed { get; set; } = string.Empty;
+        public string FormattedProgress { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
     }
 }

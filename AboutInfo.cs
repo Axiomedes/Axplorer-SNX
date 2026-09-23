@@ -25,7 +25,7 @@ namespace aXplorer
         public static string AppName { get; set; } = "Axplorer";
         public static string BrandTag { get; set; } = "SNX";
         public static string Subtitle { get; set; } = "Spatial Neural Plex";
-        public static string Version { get; set; } = "v0.2.5 • Edición SNX (Windows 10/11)";
+        public static string Version { get; set; } = "v0.2.9 • Edición SNX (Windows 10/11)";
 
         // =========================================================================
         // Descripción General del Sistema

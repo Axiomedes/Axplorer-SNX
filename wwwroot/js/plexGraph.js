@@ -393,6 +393,7 @@ class PlexGraph {
       material.emissiveIntensity = isCenter ? 0.75 : 0.6;
       ring.scale.set(1.2, 1.2, 1.2);
       ringMat.opacity = 0.8;
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
 
     group.onHoverExit = () => {
@@ -400,6 +401,7 @@ class PlexGraph {
       material.emissiveIntensity = isCenter ? 0.45 : 0.28;
       ring.scale.set(1, 1, 1);
       ringMat.opacity = isCenter ? 0.6 : 0.35;
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     mesh.userData = group.userData;
@@ -678,7 +680,7 @@ class PlexGraph {
     }
 
     // 2. Maintain constant screen size for text label sprites (Zoom-invariant labels)
-    if (this.showLabels && this.engine.camera) {
+    if (this.engine.camera && this.labelSprites) {
       const camPos = this.engine.camera.position;
       for (let i = 0; i < this.labelSprites.length; i++) {
         const item = this.labelSprites[i];

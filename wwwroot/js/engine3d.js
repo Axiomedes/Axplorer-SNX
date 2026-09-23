@@ -25,6 +25,8 @@ class Engine3D {
     this.onNodeHover = null;
     this.onNodeClick = null;
     this.onNodeDoubleClick = null;
+    this.onBackgroundClick = null;
+    this.activeSelectionHalos = [];
 
     this.init();
   }
@@ -250,7 +252,11 @@ class Engine3D {
       }
       this.selectedObject = target;
       if (this.onNodeClick) {
-        this.onNodeClick(target.userData.nodeData);
+        this.onNodeClick(target.userData.nodeData, event, target);
+      }
+    } else {
+      if (this.onBackgroundClick) {
+        this.onBackgroundClick(event);
       }
     }
   }
@@ -294,15 +300,72 @@ class Engine3D {
         targetData = target.userData.nodeData;
         targetMesh = target;
         this.selectedObject = target;
-        if (this.onNodeClick) {
-          this.onNodeClick(targetData);
-        }
       }
     }
 
     if (this.onNodeContextMenu) {
       this.onNodeContextMenu(targetData, event, targetMesh);
     }
+  }
+
+  setNodeSelected(nodeMesh, isSelected) {
+    if (!nodeMesh) return;
+    const existingHalo = nodeMesh.getObjectByName('__selectionHalo__');
+    if (isSelected) {
+      if (!existingHalo) {
+        const box = new THREE.Box3().setFromObject(nodeMesh);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.z, 2.2);
+        const radius = maxDim * 0.72;
+
+        const haloGroup = new THREE.Group();
+        haloGroup.name = '__selectionHalo__';
+
+        // Outer neon cyan ring
+        const ringGeo = new THREE.RingGeometry(radius * 0.95, radius * 1.15, 48);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0x00f0ff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.92
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.rotation.x = Math.PI / 2;
+        ringMesh.position.y = 0.05;
+        haloGroup.add(ringMesh);
+
+        // Inner glowing disc aura
+        const innerGeo = new THREE.RingGeometry(0.1, radius * 0.92, 48);
+        const innerMat = new THREE.MeshBasicMaterial({
+          color: 0x00f0ff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.18
+        });
+        const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+        innerMesh.rotation.x = Math.PI / 2;
+        innerMesh.position.y = 0.04;
+        haloGroup.add(innerMesh);
+
+        nodeMesh.add(haloGroup);
+        this.activeSelectionHalos.push(haloGroup);
+      }
+    } else {
+      if (existingHalo) {
+        nodeMesh.remove(existingHalo);
+        this.activeSelectionHalos = this.activeSelectionHalos.filter(h => h !== existingHalo);
+      }
+    }
+  }
+
+  clearAllSelectionHalos() {
+    for (const halo of this.activeSelectionHalos) {
+      if (halo.parent) {
+        halo.parent.remove(halo);
+      }
+    }
+    this.activeSelectionHalos = [];
   }
 
   flyCameraTo(targetPos, targetLookAt, duration = 1000) {
@@ -343,6 +406,13 @@ class Engine3D {
 
     this.controls.update();
 
+    // Subtle holographic rotation of active 3D selection halos
+    if (this.activeSelectionHalos && this.activeSelectionHalos.length > 0) {
+      for (let i = 0; i < this.activeSelectionHalos.length; i++) {
+        this.activeSelectionHalos[i].rotation.y += 0.015;
+      }
+    }
+
     // Call any per-frame scene updates
     if (window.plexGraph && window.plexGraph.onRenderFrame) {
       window.plexGraph.onRenderFrame(time);
@@ -352,6 +422,9 @@ class Engine3D {
     }
     if (window.neuralNetwork && window.neuralNetwork.onRenderFrame) {
       window.neuralNetwork.onRenderFrame(time);
+    }
+    if (window.galleryMuseum && window.galleryMuseum.onRenderFrame) {
+      window.galleryMuseum.onRenderFrame(time);
     }
 
     if (this.composer) {

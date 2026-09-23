@@ -15,6 +15,7 @@ namespace aXplorer.Bridge
         private readonly Window _mainWindow;
         private CoreWebView2? _webView;
         private string _currentPath = "root";
+        private System.Threading.CancellationTokenSource? _pasteCts;
 
         private static readonly JsonSerializerOptions JsonOpts = new()
         {
@@ -220,14 +221,66 @@ namespace aXplorer.Bridge
                     break;
 
                 case "copy_file_clipboard":
-                    if (!string.IsNullOrEmpty(message.Payload))
+                case "copy_multiple_clipboard":
                     {
-                        bool copied = _fileSystemService.CopyFileToClipboard(message.Payload);
-                        if (copied)
+                        var paths = ParsePathsFromPayload(message.Payload);
+                        if (paths.Count > 0)
                         {
-                            SendNotification($"Copiado al portapapeles: {System.IO.Path.GetFileName(message.Payload)}");
+                            bool copied = _fileSystemService.CopyFilesToClipboard(paths, isCut: false);
+                            if (copied)
+                            {
+                                string msg = paths.Count == 1
+                                    ? $"Copiado al portapapeles: {System.IO.Path.GetFileName(paths[0])}"
+                                    : $"{paths.Count} elementos copiados al portapapeles";
+                                SendNotification(msg);
+                            }
+                            SendClipboardStatus();
                         }
-                        SendClipboardStatus();
+                    }
+                    break;
+
+                case "cut_file_clipboard":
+                case "cut_multiple_clipboard":
+                    {
+                        var paths = ParsePathsFromPayload(message.Payload);
+                        if (paths.Count > 0)
+                        {
+                            bool cut = _fileSystemService.CopyFilesToClipboard(paths, isCut: true);
+                            if (cut)
+                            {
+                                string msg = paths.Count == 1
+                                    ? $"Cortado al portapapeles: {System.IO.Path.GetFileName(paths[0])}"
+                                    : $"{paths.Count} elementos cortados al portapapeles";
+                                SendNotification(msg);
+                            }
+                            SendClipboardStatus();
+                        }
+                    }
+                    break;
+
+                case "compress_items":
+                    {
+                        var paths = ParsePathsFromPayload(message.Payload);
+                        if (paths.Count > 0)
+                        {
+                            var (success, msg, zipPath) = _fileSystemService.CompressItemsToZip(paths);
+                            SendNotification(msg);
+                            if (success)
+                            {
+                                SendPlexUpdate(_currentPath);
+                            }
+                        }
+                    }
+                    break;
+
+                case "print_items":
+                    {
+                        var paths = ParsePathsFromPayload(message.Payload);
+                        if (paths.Count > 0)
+                        {
+                            var (count, msg) = _fileSystemService.PrintFiles(paths);
+                            SendNotification(msg);
+                        }
                     }
                     break;
 
@@ -238,13 +291,34 @@ namespace aXplorer.Bridge
                         {
                             destPath = _currentPath;
                         }
-                        var (pasted, pasteMsg) = _fileSystemService.PasteFromClipboard(destPath);
-                        SendNotification(pasteMsg);
-                        SendClipboardStatus();
-                        if (pasted)
+
+                        _pasteCts?.Cancel();
+                        _pasteCts?.Dispose();
+                        _pasteCts = new System.Threading.CancellationTokenSource();
+                        var token = _pasteCts.Token;
+
+                        var progress = new Progress<PasteProgressInfo>(info =>
                         {
-                            SendPlexUpdate(_currentPath);
-                        }
+                            SendPasteProgress(info);
+                        });
+
+                        System.Threading.Tasks.Task.Run(async () =>
+                        {
+                            var (pasted, pasteMsg) = await _fileSystemService.PasteFromClipboardAsync(destPath, progress, token);
+                            SendNotification(pasteMsg);
+                            SendClipboardStatus();
+                            SendPasteCompleted(pasted, pasteMsg);
+                            if (pasted)
+                            {
+                                SendPlexUpdate(_currentPath);
+                            }
+                        }, token);
+                    }
+                    break;
+
+                case "cancel_paste":
+                    {
+                        _pasteCts?.Cancel();
                     }
                     break;
 
@@ -356,7 +430,7 @@ namespace aXplorer.Bridge
                 };
 
                 string json = JsonSerializer.Serialize(response, JsonOpts);
-                _webView?.PostWebMessageAsJson(json);
+                PostWebMessage(json);
             }
             catch (Exception ex)
             {
@@ -375,7 +449,7 @@ namespace aXplorer.Bridge
                     data = windows
                 };
                 string json = JsonSerializer.Serialize(response, JsonOpts);
-                _webView?.PostWebMessageAsJson(json);
+                PostWebMessage(json);
             }
             catch { }
         }
@@ -390,7 +464,7 @@ namespace aXplorer.Bridge
                     message = text
                 };
                 string json = JsonSerializer.Serialize(response, JsonOpts);
-                _webView?.PostWebMessageAsJson(json);
+                PostWebMessage(json);
             }
             catch { }
         }
@@ -406,7 +480,7 @@ namespace aXplorer.Bridge
                     hasFiles = hasFiles
                 };
                 string json = JsonSerializer.Serialize(response, JsonOpts);
-                _webView?.PostWebMessageAsJson(json);
+                PostWebMessage(json);
             }
             catch { }
         }
@@ -421,9 +495,125 @@ namespace aXplorer.Bridge
                     data = aXplorer.AboutInfo.ToPayload()
                 };
                 string json = JsonSerializer.Serialize(response, JsonOpts);
-                _webView?.PostWebMessageAsJson(json);
+                PostWebMessage(json);
             }
             catch { }
+        }
+
+        public void SendPasteProgress(PasteProgressInfo progress)
+        {
+            try
+            {
+                var response = new
+                {
+                    type = "paste_progress",
+                    data = progress
+                };
+                string json = JsonSerializer.Serialize(response, JsonOpts);
+                PostWebMessage(json);
+            }
+            catch { }
+        }
+
+        public void SendPasteCompleted(bool success, string message)
+        {
+            try
+            {
+                var response = new
+                {
+                    type = "paste_completed",
+                    success = success,
+                    message = message
+                };
+                string json = JsonSerializer.Serialize(response, JsonOpts);
+                PostWebMessage(json);
+            }
+            catch { }
+        }
+
+        private void PostWebMessage(string json)
+        {
+            if (_mainWindow?.Dispatcher?.CheckAccess() == true)
+            {
+                _webView?.PostWebMessageAsJson(json);
+            }
+            else
+            {
+                _mainWindow?.Dispatcher?.InvokeAsync(() =>
+                {
+                    _webView?.PostWebMessageAsJson(json);
+                });
+            }
+        }
+
+        private static System.Collections.Generic.List<string> ParsePathsFromPayload(string? payload)
+        {
+            var list = new System.Collections.Generic.List<string>();
+            if (string.IsNullOrWhiteSpace(payload)) return list;
+
+            if (payload.TrimStart().StartsWith("["))
+            {
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(payload, JsonOpts);
+                    if (parsed != null)
+                    {
+                        list.AddRange(parsed);
+                    }
+                }
+                catch { }
+            }
+
+            if (list.Count == 0 && !string.IsNullOrWhiteSpace(payload))
+            {
+                list.Add(payload);
+            }
+            return list;
+        }
+
+        public void HandleDeviceChange()
+        {
+            // Debounce 600ms so Windows completes volume mounting/dismounting
+            System.Threading.Tasks.Task.Delay(600).ContinueWith(_ =>
+            {
+                _mainWindow?.Dispatcher?.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        // Check if current path was on an unplugged drive
+                        if (_currentPath != "root" && _currentPath != "welcome")
+                        {
+                            if (!System.IO.Directory.Exists(_currentPath))
+                            {
+                                _currentPath = "root";
+                            }
+                        }
+
+                        if (_currentPath == "root" || _currentPath == "welcome")
+                        {
+                            SendPlexUpdate(_currentPath);
+                        }
+                        else
+                        {
+                            // Send updated drives to refresh sidebar
+                            var drives = _fileSystemService.GetDrives();
+                            var response = new
+                            {
+                                type = "drives_update",
+                                data = drives
+                            };
+                            string json = JsonSerializer.Serialize(response, JsonOpts);
+                            PostWebMessage(json);
+                        }
+
+                        SendNotification("Almacenamiento USB / Unidades actualizadas");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error handling device change: {ex.Message}");
+                    }
+                });
+            });
         }
 
         [DllImport("user32.dll")]

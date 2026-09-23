@@ -1,0 +1,402 @@
+/* gallery.css - Styles for Axplorer SNX 3D Virtual Museum & Gallery Mode */
+
+/* Exit Gallery Button (Top Floating) */
+.gallery-exit-btn {
+  position: absolute;
+  top: 60px;
+  right: 25px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 20px;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0, 240, 255, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.gallery-exit-btn:hover {
+  background: rgba(225, 29, 72, 0.85);
+  border-color: rgba(255, 99, 132, 0.8);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(225, 29, 72, 0.45), 0 0 20px rgba(255, 99, 132, 0.4);
+}
+
+.gallery-exit-btn span.exit-icon {
+  font-size: 15px;
+}
+
+.gallery-exit-btn kbd {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #94a3b8;
+}
+
+/* Central FPS Reticle / Crosshair */
+.gallery-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(0, 240, 255, 0.6);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.8), inset 0 0 2px #ffffff;
+  pointer-events: none;
+  z-index: 990;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.gallery-reticle.active {
+  transform: translate(-50%, -50%) scale(1.6);
+  background: rgba(56, 189, 248, 0.95);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 1);
+}
+
+/* Floating Controls Helper Banner */
+.gallery-controls-badge {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 20px;
+  background: rgba(10, 15, 29, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 24px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  color: #cbd5e1;
+  font-size: 12px;
+  z-index: 990;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.gallery-control-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gallery-control-item kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #38bdf8;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.gallery-control-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Gallery Room Title Header (Shown briefly or top banner) */
+.gallery-header-badge {
+  position: absolute;
+  top: 60px;
+  left: 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  border-radius: 20px;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.gallery-header-badge .gallery-folder-name {
+  color: #38bdf8;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================================================================
+   Gallery Intro / Tutorial Overlay Card
+   ========================================================================= */
+.gallery-intro-card {
+  position: absolute;
+  top: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 520px;
+  max-width: 92vw;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 18px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 240, 255, 0.25);
+  padding: 22px 26px;
+  z-index: 1050;
+  color: #f8fafc;
+  pointer-events: auto;
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gallery-intro-card.fade-out {
+  opacity: 0;
+  transform: translate(-50%, -25px);
+  pointer-events: none;
+}
+
+.gallery-intro-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 16px;
+}
+
+.gallery-intro-icon {
+  font-size: 32px;
+}
+
+.gallery-intro-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #00f0ff;
+  letter-spacing: 0.5px;
+}
+
+.gallery-intro-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.gallery-intro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.gallery-intro-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.intro-key-badge {
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  white-space: nowrap;
+  font-family: inherit;
+  margin-top: 2px;
+}
+
+.intro-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.intro-text strong {
+  font-size: 12.5px;
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.intro-text span {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.gallery-intro-footer {
+  text-align: center;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11.5px;
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+/* =========================================================================
+   Cinema Screening Room Floating Controls Bar
+   ========================================================================= */
+.gallery-cinema-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  max-width: 92vw;
+  background: rgba(10, 15, 29, 0.90);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 16px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 240, 255, 0.2);
+  padding: 12px 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #f8fafc;
+  pointer-events: auto;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.cinema-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cinema-badge {
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.cinema-video-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cinema-time-display {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.cinema-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cinema-ctrl-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #f8fafc;
+  width: 34px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cinema-ctrl-btn:hover {
+  background: rgba(0, 240, 255, 0.3);
+  border-color: #00f0ff;
+  color: #00f0ff;
+  transform: scale(1.05);
+}
+
+.cinema-scrub-bar {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+  outline: none;
+  cursor: pointer;
+}
+
+.cinema-scrub-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.cinema-scrub-bar::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+.cinema-vol-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cinema-vol-btn {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.cinema-vol-slider {
+  width: 60px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  cursor: pointer;
+}
+
+.cinema-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #38bdf8;
+  cursor: pointer;
+}

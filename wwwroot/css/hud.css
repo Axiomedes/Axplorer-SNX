@@ -1232,6 +1232,383 @@ input:checked + .switch-slider:before {
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
+/* Floating Real-Time Paste/Copy Progress Card */
+.paste-progress-card {
+  position: fixed;
+  bottom: 72px;
+  right: 28px;
+  width: 390px;
+  max-width: calc(100vw - 40px);
+  background: rgba(10, 16, 32, 0.94);
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 240, 255, 0.25), inset 0 0 14px rgba(0, 240, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 18px;
+  backdrop-filter: blur(16px);
+  z-index: 10005;
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  user-select: none;
+}
+
+.paste-progress-card.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.paste-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.paste-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #00f0ff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.paste-header-icon {
+  font-size: 15px;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.7));
+}
+
+.paste-cancel-btn {
+  background: rgba(255, 60, 60, 0.15);
+  border: 1px solid rgba(255, 60, 60, 0.4);
+  color: #ff6b6b;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.paste-cancel-btn:hover {
+  background: rgba(255, 60, 60, 0.35);
+  border-color: #ff4757;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+  transform: scale(1.08);
+}
+
+.paste-progress-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paste-current-file {
+  font-size: 12px;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.paste-meter-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.paste-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  border-radius: 4px;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.7);
+  transition: width 0.08s linear;
+  position: relative;
+  overflow: hidden;
+}
+
+.paste-meter-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: pasteShimmer 1.4s infinite;
+}
+
+@keyframes pasteShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.paste-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.paste-stats-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paste-stat-separator {
+  opacity: 0.5;
+}
+
+.paste-stats-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paste-speed-badge {
+  background: rgba(0, 240, 255, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.paste-percent-stat {
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #00f0ff;
+  min-width: 32px;
+  text-align: right;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+}
+
+/* =========================================================================
+ * FLOATING MULTI-SELECTION CARD
+ * ========================================================================= */
+.multi-selection-card {
+  position: fixed;
+  top: 75px;
+  right: 28px;
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  background: rgba(10, 16, 32, 0.88);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 240, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(16px);
+  z-index: 10004;
+  opacity: 0;
+  transform: translateX(20px) scale(0.98);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  user-select: none;
+}
+
+.multi-selection-card.visible {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.multi-selection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  margin-bottom: 8px;
+}
+
+.multi-selection-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #00f0ff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.multi-selection-icon {
+  font-size: 14px;
+}
+
+.selection-badge {
+  background: rgba(0, 240, 255, 0.18);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  color: #38bdf8;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-family: 'Consolas', monospace;
+  font-weight: 700;
+}
+
+.multi-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #94a3b8;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.multi-close-btn:hover {
+  background: rgba(255, 60, 60, 0.35);
+  border-color: #ff4757;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.5);
+  transform: scale(1.08);
+}
+
+.multi-selection-list {
+  max-height: 175px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 2px;
+}
+
+.multi-selection-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.multi-selection-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.3);
+  border-radius: 3px;
+}
+
+.multi-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 11.5px;
+  color: #cbd5e1;
+  transition: background 0.15s ease;
+}
+
+.multi-item-row:hover {
+  background: rgba(0, 240, 255, 0.12);
+  color: #ffffff;
+}
+
+.multi-item-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 250px;
+}
+
+.multi-item-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.multi-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multi-remove-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: color 0.15s ease;
+}
+
+.multi-remove-btn:hover {
+  color: #ff6b6b;
+}
+
+.multi-selection-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.multisel-action-btn {
+  flex: 1;
+  padding: 6px 4px;
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: all 0.2s ease;
+}
+
+.multisel-action-btn:hover {
+  background: rgba(0, 240, 255, 0.28);
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.multisel-action-btn.more {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.multisel-action-btn.more:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
 
 
 

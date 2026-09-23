@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Axplorer SNX - Spatial Neural Plex</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" href="app.png">
   <link rel="stylesheet" href="css/hud.css">
+  <link rel="stylesheet" href="css/gallery.css">
 </head>
 <body>
   <!-- 3D Three.js WebGL Canvas -->
@@ -15,8 +18,11 @@
     <!-- Top Bar -->
     <header id="top-bar" class="interactive">
       <div class="brand-section">
-        <div class="brand-logo">Axplorer <span class="brand-tag">SNX</span></div>
-        <div class="brand-subtitle">Spatial Neural Plex</div>
+        <img src="app.png" alt="AX" class="brand-logo-icon" style="width: 26px; height: 26px; border-radius: 6px; box-shadow: 0 0 10px rgba(0, 240, 255, 0.45); object-fit: cover;">
+        <div>
+          <div class="brand-logo">Axplorer <span class="brand-tag">SNX</span></div>
+          <div class="brand-subtitle">Spatial Neural Plex</div>
+        </div>
       </div>
 
       <!-- Quick Filter / Search -->
@@ -136,6 +142,65 @@
   <!-- Toast Notification Feedback -->
   <div id="hud-toast" class="hud-toast" style="display: none;"></div>
 
+  <!-- Floating Real-Time Paste/Copy Progress Card -->
+  <div id="paste-progress-card" class="paste-progress-card glass-panel" style="display: none;">
+    <div class="paste-progress-header">
+      <div class="paste-header-title">
+        <span class="paste-header-icon">📥</span>
+        <span id="paste-title-text">Copiando elementos...</span>
+      </div>
+      <button id="btn-cancel-paste" class="paste-cancel-btn" title="Cancelar transferencia">✕</button>
+    </div>
+    <div class="paste-progress-body">
+      <div id="paste-current-file" class="paste-current-file" title="">Iniciando...</div>
+      <div class="paste-meter-track">
+        <div id="paste-meter-fill" class="paste-meter-fill" style="width: 0%;">
+          <div class="paste-meter-shimmer"></div>
+        </div>
+      </div>
+      <div class="paste-stats-row">
+        <div class="paste-stats-left">
+          <span id="paste-items-count">0 / 0</span>
+          <span class="paste-stat-separator">•</span>
+          <span id="paste-size-stats">0 B / 0 B</span>
+        </div>
+        <div class="paste-stats-right">
+          <span id="paste-speed-stat" class="paste-speed-badge">0 B/s</span>
+          <span id="paste-percent-stat" class="paste-percent-stat">0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Semi-Transparent Multi-Selection Card -->
+  <div id="multi-selection-card" class="multi-selection-card glass-panel" style="display: none;">
+    <div class="multi-selection-header">
+      <div class="multi-selection-title">
+        <span class="multi-selection-icon">📑</span>
+        <span id="multi-selection-heading">Selección Múltiple</span>
+        <span id="multi-selection-badge" class="selection-badge">0</span>
+      </div>
+      <button id="btn-clear-selection" class="multi-close-btn" title="Desmarcar todo (Esc)">✕</button>
+    </div>
+    <div id="multi-selection-list" class="multi-selection-list">
+      <!-- Items dynamically populated -->
+    </div>
+    <div class="multi-selection-actions">
+      <button id="btn-multisel-copy" class="multisel-action-btn" title="Copiar seleccionados (Ctrl+C)">
+        <span>📋</span> Copiar
+      </button>
+      <button id="btn-multisel-cut" class="multisel-action-btn" title="Cortar seleccionados (Ctrl+X)">
+        <span>✂️</span> Cortar
+      </button>
+      <button id="btn-multisel-zip" class="multisel-action-btn" title="Comprimir en ZIP">
+        <span>🗜️</span> ZIP
+      </button>
+      <button id="btn-multisel-more" class="multisel-action-btn more" title="Más opciones por lote">
+        <span>⚙️</span> Más...
+      </button>
+    </div>
+  </div>
+
   <!-- Windows File Explorer Context Menu -->
   <div id="win-context-menu" class="win-context-menu glass-panel" style="display: none;">
     <div class="ctx-header">
@@ -147,6 +212,10 @@
       <span class="ctx-item-icon">⚡</span>
       <span class="ctx-item-label" id="ctx-open-label">Abrir</span>
       <span class="ctx-item-shortcut">Enter</span>
+    </div>
+    <div class="ctx-item" data-action="open_gallery" id="ctx-action-gallery" style="display: none;">
+      <span class="ctx-item-icon">🖼️</span>
+      <span class="ctx-item-label">Modo Galería 3D</span>
     </div>
     <div class="ctx-item" data-action="show_in_folder" id="ctx-action-reveal">
       <span class="ctx-item-icon">🪟</span>
@@ -162,17 +231,30 @@
     <div class="ctx-divider" id="ctx-div-clipboard"></div>
     <div class="ctx-item" data-action="copy_file" id="ctx-action-copy-file">
       <span class="ctx-item-icon">📋</span>
-      <span class="ctx-item-label">Copiar elemento</span>
-      <span class="ctx-item-shortcut">Ctrl+C</span>
+      <span class="ctx-item-label" id="ctx-copy-label">Copiar</span>
+      <span class="ctx-item-shortcut" id="ctx-copy-shortcut">Ctrl+C</span>
+    </div>
+    <div class="ctx-item" data-action="cut_file" id="ctx-action-cut-file">
+      <span class="ctx-item-icon">✂️</span>
+      <span class="ctx-item-label" id="ctx-cut-label">Cortar</span>
+      <span class="ctx-item-shortcut" id="ctx-cut-shortcut">Ctrl+X</span>
     </div>
     <div class="ctx-item" data-action="paste_file" id="ctx-action-paste-file">
       <span class="ctx-item-icon">📥</span>
-      <span class="ctx-item-label">Pegar elemento</span>
+      <span class="ctx-item-label" id="ctx-paste-label">Pegar</span>
       <span class="ctx-item-shortcut">Ctrl+V</span>
+    </div>
+    <div class="ctx-item" data-action="compress_selected" id="ctx-action-compress-selected" style="display: none;">
+      <span class="ctx-item-icon">🗜️</span>
+      <span class="ctx-item-label">Comprimir en ZIP</span>
+    </div>
+    <div class="ctx-item" data-action="print_selected" id="ctx-action-print-selected" style="display: none;">
+      <span class="ctx-item-icon">🖨️</span>
+      <span class="ctx-item-label">Imprimir</span>
     </div>
     <div class="ctx-item" data-action="copy_path" id="ctx-action-copy-path">
       <span class="ctx-item-icon">🔗</span>
-      <span class="ctx-item-label">Copiar como ruta de acceso</span>
+      <span class="ctx-item-label" id="ctx-copy-path-label">Copiar como ruta de acceso</span>
       <span class="ctx-item-shortcut">Ctrl+Shift+C</span>
     </div>
     <div class="ctx-item" data-action="copy_name" id="ctx-action-copy-name">
@@ -280,6 +362,18 @@
           </label>
         </div>
 
+        <!-- Option 6: Controles WASD en Modo Galería -->
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-name">Controles WASD en Modo Galería</span>
+            <span class="setting-desc">Permite desplazarse con teclas W, A, S, D además de las flechas de dirección</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-gallery-wasd">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
         <!-- Option 6: Flujo de Datos Asíncrono (Aleatorio) -->
         <div class="setting-row">
           <div class="setting-label">
@@ -327,17 +421,6 @@
             <span class="switch-slider"></span>
           </label>
         </div>
-
-        <!-- Option 9: Acerca de la Aplicación -->
-        <div class="setting-row highlight-row">
-          <div class="setting-label">
-            <span class="setting-name">Acerca de Axplorer SNX</span>
-            <span class="setting-desc">Información del sistema, arquitectura y desarrollador</span>
-          </div>
-          <button id="btn-open-about-settings" class="action-btn secondary" style="padding: 6px 14px; font-size: 11px;">
-            <span>ℹ️</span> Ver Detalles
-          </button>
-        </div>
       </div>
       <div class="settings-footer">
         <button id="btn-save-settings" class="action-btn primary">Aceptar</button>
@@ -360,7 +443,7 @@
         <div class="about-hero">
           <div class="about-hero-logo" id="about-hero-logo">Axplorer <span class="brand-tag">SNX</span></div>
           <div class="about-hero-sub" id="about-hero-sub">Spatial Neural Plex</div>
-          <div class="about-version-pill" id="about-version-pill">v1.2.0 • Edición SNX (Windows 11)</div>
+          <div class="about-version-pill" id="about-version-pill">v0.2.9 • Edición SNX (Windows 10/11)</div>
         </div>
 
         <!-- App Description -->
@@ -415,6 +498,7 @@
   <script src="js/plexGraph.js"></script>
   <script src="js/cityGrid.js"></script>
   <script src="js/neuralNetwork.js"></script>
+  <script src="js/galleryMuseum.js"></script>
   <script src="js/hudOverlay.js"></script>
   <script src="js/main.js"></script>
 </body>

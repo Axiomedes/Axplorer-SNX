@@ -189,6 +189,7 @@ class CityGrid {
       wireframe.scale.set(1.06, 1.06, 1.06);
       edgeMat.color.setHex(0x38bdf8);
       document.body.style.cursor = "pointer";
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
 
     group.onHoverExit = () => {
@@ -197,6 +198,7 @@ class CityGrid {
       wireframe.scale.set(1, 1, 1);
       edgeMat.color.setHex(0x00f0ff);
       document.body.style.cursor = "default";
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     group.onDoubleClick = () => {
@@ -376,12 +378,14 @@ class CityGrid {
       mesh.scale.set(1.05, 1.05, 1.05);
       mat.emissiveIntensity = 0.45;
       document.body.style.cursor = "pointer";
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
 
     group.onHoverExit = () => {
       mesh.scale.set(1, 1, 1);
       mat.emissiveIntensity = 0.16;
       document.body.style.cursor = "default";
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     group.onDoubleClick = () => {
@@ -426,12 +430,14 @@ class CityGrid {
       mesh.scale.set(1.05, 1.05, 1.05);
       mat.emissiveIntensity = 0.45;
       document.body.style.cursor = "pointer";
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
 
     group.onHoverExit = () => {
       mesh.scale.set(1, 1, 1);
       mat.emissiveIntensity = 0.14;
       document.body.style.cursor = "default";
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     group.onDoubleClick = () => {
@@ -754,6 +760,17 @@ class CityGrid {
       mainMesh.add(plate);
     }
 
+    // Floating label badge
+    const labelSubtitle = data.isDirectory ? "Carpeta" : (data.formattedSize || "Archivo");
+    const labelSprite = this.createTextBadge(data.name, labelSubtitle, colorHex);
+    const labelY = data.isDirectory ? (h + 3.0) : (h + 1.8);
+    labelSprite.position.set(0, labelY, 0);
+    const badgeW = Math.max(5.5, Math.min(8.5, w * 1.5));
+    const badgeH = badgeW * (140 / 512);
+    labelSprite.scale.set(badgeW, badgeH, 1);
+    labelSprite.visible = this.showLabels;
+    group.add(labelSprite);
+
     mainMesh.userData = group.userData;
 
     // Hover Animation Handlers
@@ -761,12 +778,14 @@ class CityGrid {
       group.position.y = 0.8; // Elevate slightly
       mainMesh.material.emissiveIntensity = 0.75;
       document.body.style.cursor = "pointer";
+      if (!this.showLabels && labelSprite) labelSprite.visible = true;
     };
 
     group.onHoverExit = () => {
       group.position.y = 0;
       mainMesh.material.emissiveIntensity = data.isDirectory ? 0.35 : 0.22;
       document.body.style.cursor = "default";
+      if (!this.showLabels && labelSprite) labelSprite.visible = false;
     };
 
     group.onDoubleClick = () => {

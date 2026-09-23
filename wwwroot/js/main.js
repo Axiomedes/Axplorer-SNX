@@ -137,12 +137,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const graph = new PlexGraph(engine);
   const city = new CityGrid(engine, bridge);
   const neural = new NeuralNetwork(engine, bridge);
+  const gallery = new GalleryMuseum(engine, bridge);
 
   window.appBridge = bridge;
   window.engine3d = engine;
   window.plexGraph = graph;
   window.cityGrid = city;
   window.neuralNetwork = neural;
+  window.galleryMuseum = gallery;
 
   const hud = new HudOverlay(bridge);
   window.hudOverlay = hud;
@@ -155,7 +157,7 @@ window.addEventListener('DOMContentLoaded', () => {
     hud.showTooltip(nodeData, event);
   };
 
-  engine.onNodeClick = (nodeData) => {
+  engine.onNodeClick = (nodeData, event, targetMesh) => {
     if (nodeData && nodeData.isAscendPortal) {
       if (hud.currentViewMode === 'neural' && window.neuralNetwork) {
         window.neuralNetwork.animateAscend(() => {
@@ -164,11 +166,15 @@ window.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
-    hud.updateInspector(nodeData);
+    hud.handleNodeClick(nodeData, event, targetMesh);
   };
 
-  engine.onNodeContextMenu = (nodeData, event) => {
-    hud.showContextMenu(nodeData, event.clientX, event.clientY);
+  engine.onBackgroundClick = (event) => {
+    hud.handleBackgroundClick(event);
+  };
+
+  engine.onNodeContextMenu = (nodeData, event, targetMesh) => {
+    hud.showContextMenu(nodeData, event.clientX, event.clientY, targetMesh);
   };
 
   // Intercept native browser right click globally to avoid browser context menu
@@ -241,17 +247,30 @@ window.addEventListener('DOMContentLoaded', () => {
       const data = msg.data;
       hud.updateGraph(data);
 
-      if (hud.currentViewMode === 'plex') {
+      if (gallery && gallery.isActive) {
+        city.cityGroup.visible = false;
+        graph.graphGroup.visible = false;
+        if (neural) neural.neuralGroup.visible = false;
+        gallery.galleryGroup.visible = true;
+        gallery.buildMuseumArchitecture(data);
+      } else if (hud.currentViewMode === 'plex') {
+        if (gallery) gallery.galleryGroup.visible = false;
         city.cityGroup.visible = false;
         if (neural) neural.neuralGroup.visible = false;
         graph.graphGroup.visible = true;
         graph.loadData(data);
+        const showLabels = hud.settingShowLabels ? hud.settingShowLabels.checked : true;
+        graph.setLabelsVisible(showLabels);
       } else if (hud.currentViewMode === 'neural') {
+        if (gallery) gallery.galleryGroup.visible = false;
         city.cityGroup.visible = false;
         graph.graphGroup.visible = false;
         neural.neuralGroup.visible = true;
         neural.loadData(data);
+        const showLabels = hud.settingShowLabels ? hud.settingShowLabels.checked : true;
+        neural.setLabelsVisible(showLabels);
       } else {
+        if (gallery) gallery.galleryGroup.visible = false;
         graph.graphGroup.visible = false;
         if (neural) neural.neuralGroup.visible = false;
         city.cityGroup.visible = true;
@@ -263,9 +282,13 @@ window.addEventListener('DOMContentLoaded', () => {
         } else {
           city.buildCityGrid(data);
         }
+        const showLabels = hud.settingShowLabels ? hud.settingShowLabels.checked : true;
+        city.setLabelsVisible(showLabels);
       }
     } else if (msg.type === 'about_info') {
       hud.updateAboutModal(msg.data);
+    } else if (msg.type === 'drives_update') {
+      hud.renderDrives(msg.data);
     } else if (msg.type === 'windows_update') {
       hud.renderWindows(msg.data);
     } else if (msg.type === 'clipboard_status') {
@@ -280,6 +303,14 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log("[aXplorer System]", msg.message);
       if (hud && hud.showToast) {
         hud.showToast(msg.message);
+      }
+    } else if (msg.type === 'paste_progress') {
+      if (hud && hud.updatePasteProgress) {
+        hud.updatePasteProgress(msg.data);
+      }
+    } else if (msg.type === 'paste_completed') {
+      if (hud && hud.hidePasteProgress) {
+        hud.hidePasteProgress();
       }
     }
   });

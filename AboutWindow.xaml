@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Acerca de Axplorer SNX"
+        Icon="app.ico"
         Width="618" Height="598"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
@@ -127,7 +128,7 @@
                         Padding="18,12" MouseDown="Header_MouseDown" Cursor="SizeAll">
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="🔮" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <Image Source="/app.png" Width="20" Height="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Acerca de Axplorer SNX" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
                         </StackPanel>
 
@@ -183,7 +184,7 @@
                                 <!-- Píldora de Versión -->
                                 <Border Background="#18FFFFFF" BorderBrush="#25FFFFFF" BorderThickness="1" 
                                         CornerRadius="14" Padding="12,4" HorizontalAlignment="Center">
-                                    <TextBlock x:Name="TxtVersion" Text="v0.2.5 • Edición SNX (Windows 10/11)" 
+                                    <TextBlock x:Name="TxtVersion" Text="v0.2.9 • Edición SNX (Windows 10/11)" 
                                                FontSize="11" Foreground="#94a3b8" FontWeight="Medium"/>
                                 </Border>
                             </StackPanel>
