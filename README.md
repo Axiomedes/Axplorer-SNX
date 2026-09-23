@@ -6,8 +6,8 @@
 [![WebView2](https://img.shields.io/badge/Bridge-Microsoft%20WebView2-008272.svg?logo=microsoftedge)](https://developer.microsoft.com/microsoft-edge/webview2/)
 [![Version](https://img.shields.io/badge/Version-v0.2.9%20SNX-00f0ff.svg)](https://github.com/)
 
-**Axplorer SNX** es un explorador y gestor de archivos espacial tridimensional de última generación para Windows 10 y 11. Transforma la interacción tradicional de árboles de carpetas estáticos y listas planas en un ecosistema tridimensional vivo, continuo, interactivo y cinemático impulsado por **.NET 10 WPF**, **WebView2** y **Three.js WebGL**.
-
+**Axplorer SNX** es un explorador y gestor de archivos espacial tridimensional para Windows 10 y 11. Transforma la interacción tradicional de árboles de carpetas estáticos y listas planas en un ecosistema tridimensional vivo, continuo, interactivo y cinemático impulsado por **.NET 10 WPF**, **WebView2** y **Three.js WebGL**.
+La idea principal de este proyecto (aun por sobre su funcionalidad) es hacer un programa entretenido de usar, diferente y distractivo, pero manteniendo el mínimo de funcionalidad requerido para incentivar su uso.
 ---
 
 ## 🔮 Modos de Exploración Espacial 3D
